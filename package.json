@@ -1,0 +1,12 @@
+{
+  "name": "scout",
+  "private": true,
+  "description": "Graduation Scout: explainable airdrop allocation for vibe/vibe graduations",
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
