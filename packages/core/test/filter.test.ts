@@ -6,7 +6,7 @@ const base: WalletFields = {
   score: 0.5, hold_quality: 0.6, market_quality: 0.4, alignment: 0.3, dump_score: 0.1, sybil_score: 0,
   spark_tier: 2, spark_balance: 250_000, viber_level: 3, viber_charged: true, guild_member: true,
   guild_ids: ['alpha'], scout_drops_received: 2, last_drop_sold_1h: 0, markets_traded: 5,
-  stock_pair_markets: 3, graduated_positions: 2, held_substance_days_max: 20, created_launches: 1,
+  stock_pair_markets: 3, stock_pair_share: 0.6, graduated_positions: 2, held_substance_days_max: 20, created_launches: 1,
   shipped_substance: true, created_rug: false, cluster_size: 1, in_creator_cluster: false,
 };
 

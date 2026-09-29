@@ -32,6 +32,15 @@ describe('sybil clustering', () => {
     expect(out.get(addr(2))!.sybilScore).toBe(0);
   });
 
+  it('does not penalize a declared alt for also being funded by its primary', () => {
+    const out = clusterWallets(
+      [wallet(1), wallet(2, { linkedTo: addr(1), firstFunding: { funder: addr(1), at: T0 } })],
+      cfg,
+    );
+    expect(out.get(addr(2))!.size).toBe(2);
+    expect(out.get(addr(2))!.sybilScore).toBe(0);
+  });
+
   it('links near-identical early buy sequences', () => {
     const buys = (offset: number) =>
       Array.from({ length: 10 }, (_, i) => ({ launchId: `L${i}`, at: T0 + i * 600 + offset }));

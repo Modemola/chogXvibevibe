@@ -70,7 +70,7 @@ export const TEMPLATES: Record<TemplateId, Template> = {
       version: 1,
       template: 'stock_pair_natives',
       buckets: [
-        { id: 'natives', weightBps: 7_000, filter: 'stock_pair_markets >= 3' },
+        { id: 'natives', weightBps: 7_000, filter: 'stock_pair_markets >= 3 AND stock_pair_share >= 0.5' },
         { id: 'spark', weightBps: 3_000, filter: 'spark_tier >= 1' },
       ],
       excludes: COMMON_EXCLUDES,

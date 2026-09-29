@@ -26,6 +26,8 @@ export interface WalletFields {
   last_drop_sold_1h: number;
   markets_traded: number;
   stock_pair_markets: number;
+  /** Fraction of markets traded that are stock-paired, 0..1. */
+  stock_pair_share: number;
   graduated_positions: number;
   held_substance_days_max: number;
   created_launches: number;
@@ -54,6 +56,7 @@ export const FIELD_TYPES: Record<keyof WalletFields, FieldType> = {
   last_drop_sold_1h: 'number',
   markets_traded: 'number',
   stock_pair_markets: 'number',
+  stock_pair_share: 'number',
   graduated_positions: 'number',
   held_substance_days_max: 'number',
   created_launches: 'number',
@@ -87,6 +90,7 @@ export function computeFields(
   }
 
   const charged = facts.viber?.lastChargedAt;
+  const stockMarkets = positions.filter((p) => p.pairClass === 'stock').length;
 
   return {
     score: scored.score,
@@ -107,7 +111,8 @@ export function computeFields(
     scout_drops_received: drops.length,
     last_drop_sold_1h: lastDrop ? (elapsedSold(lastDrop, asOf).h1 ?? 0) : 0,
     markets_traded: positions.length,
-    stock_pair_markets: positions.filter((p) => p.pairClass === 'stock').length,
+    stock_pair_markets: stockMarkets,
+    stock_pair_share: positions.length ? stockMarkets / positions.length : 0,
     graduated_positions: positions.filter((p) => p.graduated).length,
     held_substance_days_max: heldSubstanceDays,
     created_launches: facts.createdLaunches.length,

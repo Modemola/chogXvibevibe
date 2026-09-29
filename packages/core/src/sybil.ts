@@ -74,7 +74,8 @@ class UnionFind {
  * - funded_by: a wallet's first funder is itself a wallet in the set.
  * - early_buys: near-identical first N buys (same launches, same order, seconds apart).
  *
- * Declared links merge caps but carry no penalty. Detected links do both.
+ * Declared links merge caps but carry no penalty. Detected links do both,
+ * except between wallets already declared as one person.
  */
 export function clusterWallets(
   facts: readonly WalletFacts[],
@@ -83,6 +84,7 @@ export function clusterWallets(
   const cfg = config.sybil;
   const all = new UnionFind();
   const detected = new UnionFind();
+  const declared = new UnionFind();
   const edges: ClusterEdge[] = [];
   const nodes = new Set<Address>();
   const ignored = new Set(cfg.ignoredFunders.map(normalizeAddress));
@@ -97,7 +99,9 @@ export function clusterWallets(
     if (a === b) return;
     edges.push({ a, b, kind, detail });
     all.union(a, b);
-    if (kind !== 'declared') detected.union(a, b);
+    if (kind === 'declared') declared.union(a, b);
+    // A detected link between wallets the owner already declared is not evidence of anything.
+    else if (declared.find(a) !== declared.find(b)) detected.union(a, b);
   };
 
   for (const f of facts) {

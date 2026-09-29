@@ -234,7 +234,12 @@ export function resolveAllocation(input: ResolveInput): AllocationSet {
       };
     })
     .filter((r) => r.amount > 0n)
-    .sort((a, b) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : compareAddress(a.wallet, b.wallet)));
+    .sort(
+      (a, b) =>
+        (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0) ||
+        b.score - a.score ||
+        compareAddress(a.wallet, b.wallet),
+    );
 
   const allocated = recipients.reduce((s, r) => s + r.amount, 0n);
   const unallocated = input.slice - allocated;

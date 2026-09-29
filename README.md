@@ -15,24 +15,79 @@ Independent builder project; not affiliated with vibe/vibe or Spark Labs.
 ## Repo layout
 
 ```
-packages/core      Pure engine: scoring, sybil clustering, policy language, resolver, Merkle  ← milestone 1
-packages/db        Postgres schema + migrations                                               (milestone 2)
-packages/sources   Data sources: SPARK on Base, simulated vibe/vibe, real vibe/vibe testnet  (milestone 2)
-apps/indexer       Worker that fills the database from sources                              (milestone 2)
+packages/core      Pure engine: scoring, sybil clustering, policy language, resolver, Merkle
+packages/db        Postgres schema, migrations, idempotent writers, WalletFacts loader
+packages/sources   Data sources: ERC-20 holder snapshots (SPARK on Base), simulated vibe/vibe world
+apps/indexer       `scout` CLI: migrate, simulate, snapshot, resolve, evaluate
 apps/web           Next.js: profiles, policy builder, previews, Aftermath pages             (milestone 3)
 contracts          ScoutSender / claim contract                                             (milestone 5)
 ```
+
+Data flows one way. A source emits normalized records (`packages/db/src/records.ts`),
+the writer stores them, the loader turns them into `WalletFacts` as of a point in time, and the core engine scores those.
+Swapping the simulated world for the real vibe/vibe testnet means writing one more source; nothing downstream changes.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm test        # all packages
+pnpm test        # all packages (core, db on in-process Postgres, sources, end-to-end)
 pnpm typecheck
 pnpm build
 ```
 
-Node 22+, pnpm 10.
+Node 22+, pnpm 10. The database is Postgres. Set `DATABASE_URL` to use a server; without it the CLI and
+tests use [PGlite](https://pglite.dev) (Postgres compiled to WASM, in-process), so nothing needs installing.
+Both produce identical results.
+
+### Try it
+
+```bash
+pnpm scout simulate                                    # simulated world: 450 wallets, 80 launches, 4 sybil farms
+pnpm scout hubs                                        # funders that funded many wallets (exchange hot wallets)
+pnpm scout evaluate --ignore-hubs 20                   # score every profile against the simulator's ground truth
+pnpm scout resolve --launch sim-0010 --template hold_or_die --ignore-hubs 20 --out alloc.csv
+pnpm scout facts 0x…                                   # what Scout knows about one wallet
+```
+
+### SPARK snapshot (real data)
+
+```bash
+pnpm scout spark-snapshot --rpc https://mainnet.base.org --from-block <SPARK deploy block> --to-block latest
+```
+
+This replays every SPARK `Transfer` log into balances, shrinking the block range automatically when the RPC refuses a
+query. The SPARK address (`0x0fb07c88bc6d195c196279523957c004eb868248`) comes from the project notes, so verify it
+before relying on a snapshot. The RPC host has to be reachable from wherever you run it.
+
+## Evaluation on the simulated world
+
+`pnpm scout evaluate --ignore-hubs 20`, `custom` template, seed 42, 373 opted-in profiles:
+
+```
+persona        wallets  mean score  share of allocation
+builder             22       0.477                12.1%
+diamond             76       0.461                41.2%
+stock_native        37       0.393                18.9%
+whale               10       0.370                 6.2%
+newbie              68       0.246                11.5%
+trencher            73       0.231                 6.9%
+dumper              38      -0.037                 3.1%
+rugger              12      -0.076                 0.0%
+farm                37      -0.813                 0.0%
+
+farm               members  flagged
+naive-0                  6        6      same funder, identical buys
+split_funding-1         11       11      different funders, identical buys
+staggered-2              9        0      different funders, buys hours apart: not detected
+naive-3                 11       11
+
+False positives: 0 of 336 non-farm wallets (8 before ignoring the 3 exchange hot wallets)
+```
+
+The staggered farm evades clustering but still gets nothing, because it dumps every drop.
+The simulator is not calibrated to real vibe/vibe data; it's a world containing the behaviours Scout has to tell apart.
+The end-to-end test (`apps/indexer/test/pipeline.test.ts`) locks these properties in.
 
 ## Scoring model
 
@@ -81,7 +136,7 @@ A policy is JSON. Filters are short strings over published wallet fields:
 
 **Filter fields:** `score hold_quality market_quality alignment dump_score sybil_score spark_tier spark_balance
 viber_level viber_charged guild_member guild_ids scout_drops_received last_drop_sold_1h markets_traded
-stock_pair_markets graduated_positions held_substance_days_max created_launches shipped_substance created_rug
+stock_pair_markets stock_pair_share graduated_positions held_substance_days_max created_launches shipped_substance created_rug
 cluster_size in_creator_cluster`
 
 **Operators:** `== != > >= < <=`, `HAS` for lists (`guild_ids HAS 'alpha'`), `AND OR NOT`, parentheses.
@@ -103,8 +158,8 @@ A bare boolean field means `== true`.
 
 ## Status
 
-- [x] **Milestone 1: core engine** (`@scout/core`), 51 tests
-- [ ] Milestone 2: data layer (Postgres, SPARK snapshot, simulated vibe/vibe source)
+- [x] **Milestone 1: core engine** (`@scout/core`)
+- [x] **Milestone 2: data layer**: Postgres schema, SPARK snapshotter, simulated world, `scout` CLI, evaluation
 - [ ] Milestone 3: API + web app (opt-in, profiles, policy builder, preview, export)
 - [ ] Milestone 4: Aftermath jobs + pages
 - [ ] Milestone 5: ScoutSender contract + real vibe/vibe testnet source

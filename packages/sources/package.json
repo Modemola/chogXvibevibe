@@ -1,0 +1,29 @@
+{
+  "name": "@scout/sources",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Data sources for Graduation Scout: ERC-20 snapshots, simulated vibe/vibe",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@scout/core": "workspace:*",
+    "@scout/db": "workspace:*",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}
