@@ -12,3 +12,4 @@ export * from './fill.js';
 export * from './merkle.js';
 export * from './resolve.js';
 export * from './export.js';
+export * from './auth.js';

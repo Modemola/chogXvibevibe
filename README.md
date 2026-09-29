@@ -19,7 +19,7 @@ packages/core      Pure engine: scoring, sybil clustering, policy language, reso
 packages/db        Postgres schema, migrations, idempotent writers, WalletFacts loader
 packages/sources   Data sources: ERC-20 holder snapshots (SPARK on Base), simulated vibe/vibe world
 apps/indexer       `scout` CLI: migrate, simulate, snapshot, resolve, evaluate
-apps/web           Next.js: profiles, policy builder, previews, Aftermath pages             (milestone 3)
+apps/web           Next.js app + JSON API: opt-in, profiles, policy builder, export, policy locks
 contracts          ScoutSender / claim contract                                             (milestone 5)
 ```
 
@@ -49,6 +49,49 @@ pnpm scout evaluate --ignore-hubs 20                   # score every profile aga
 pnpm scout resolve --launch sim-0010 --template hold_or_die --ignore-hubs 20 --out alloc.csv
 pnpm scout facts 0x…                                   # what Scout knows about one wallet
 ```
+
+### Web app
+
+```bash
+pnpm scout simulate      # once, if the database is empty
+pnpm web                 # builds the packages, then http://localhost:3000
+```
+
+| Page | What it does |
+|---|---|
+| `/` | Live counts and how Scout works |
+| `/join` | Connect a browser wallet, sign to opt in. Link an alt: the alt signs, you switch accounts, the primary signs the same message |
+| `/profile/<wallet>` | Score, every reason with its contribution, H/Q/A/D/Y components, which templates the wallet matches, Scout drop history, detected wallet links. Rescore for any template, lane and pair |
+| `/builder` | Pick a template and launch, edit buckets, filters, caps and excludes, and see the resolved allocation update live. Download the CSV or policy JSON, save the policy (content hash), or lock it to a launch with the creator's signature |
+| `/launches` | Indexed launches, their creators and locked policies |
+
+Signing is plain `personal_sign` on messages with a server nonce, valid for 10 minutes and usable once. No transactions and
+no network switching. Smart-contract wallets (ERC-1271) aren't supported yet.
+
+**API** (JSON; token amounts are decimal strings in raw units):
+
+| Method | Path | Body / query |
+|---|---|---|
+| GET | `/api/stats`, `/api/launches`, `/api/templates` | |
+| GET | `/api/profiles/:wallet` | `?template=&lane=&pair=` |
+| POST | `/api/auth/nonce` | → `{ nonce, issuedAt }` to build a message with `buildMessage` from `@scout/core` |
+| POST | `/api/profiles` | `{ message, signature }` opt in |
+| POST | `/api/links` | `{ message, signature, primarySignature }` |
+| POST | `/api/preview` | `{ policy, launch: { launchId } \| { lane, pairClass, creator }, slice, topN? }` |
+| POST | `/api/export` | same as preview → CSV |
+| POST | `/api/policies` · GET `/api/policies/:hash` | `{ policy }` → `{ hash }` |
+| POST | `/api/locks` | `{ message, signature }` from the launch creator |
+
+| Env var | Default | |
+|---|---|---|
+| `DATABASE_URL` | unset | Postgres; PGlite when unset |
+| `SCOUT_PGLITE_DIR` | `<repo>/.data/pglite` | Shared by the CLI and the web app |
+| `SCOUT_IGNORE_HUBS_MIN_FANOUT` | `20` | Funders of this many wallets are ignored for sybil links; `0` disables |
+| `SCOUT_SIMULATE` | unset | `1` seeds the simulated world into an empty database (demos only) |
+
+Browser tests: `pnpm e2e` builds the app and drives it in Chromium with an injected test wallet. They cover opt-in, linking,
+profiles, the builder's validation and CSV export, and the phone layout.
+Set `PLAYWRIGHT_CHROMIUM_PATH` if Playwright's own browser isn't installed.
 
 ### SPARK snapshot (real data)
 
@@ -160,6 +203,6 @@ A bare boolean field means `== true`.
 
 - [x] **Milestone 1: core engine** (`@scout/core`)
 - [x] **Milestone 2: data layer**: Postgres schema, SPARK snapshotter, simulated world, `scout` CLI, evaluation
-- [ ] Milestone 3: API + web app (opt-in, profiles, policy builder, preview, export)
+- [x] **Milestone 3: API + web app**: signed opt-in and linking, profiles, policy builder with live preview, export, policy locks
 - [ ] Milestone 4: Aftermath jobs + pages
 - [ ] Milestone 5: ScoutSender contract + real vibe/vibe testnet source

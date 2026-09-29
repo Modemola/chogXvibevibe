@@ -155,10 +155,14 @@ export async function writeBatch(db: Db, batch: RecordBatch): Promise<void> {
       await insertRows(
         tx,
         'wallet_links',
-        [col('wallet', 'text'), col('primary_wallet', 'text'), col('linked_at', 'bigint'), col('signature', 'text')],
-        batch.links.map((l) => [l.wallet, l.primaryWallet, l.linkedAt, l.signature]),
+        [
+          col('wallet', 'text'), col('primary_wallet', 'text'), col('linked_at', 'bigint'), col('signature', 'text'),
+          col('primary_signature', 'text'),
+        ],
+        batch.links.map((l) => [l.wallet, l.primaryWallet, l.linkedAt, l.signature, l.primarySignature]),
         `ON CONFLICT (wallet) DO UPDATE SET primary_wallet = EXCLUDED.primary_wallet,
-           linked_at = EXCLUDED.linked_at, signature = EXCLUDED.signature`,
+           linked_at = EXCLUDED.linked_at, signature = EXCLUDED.signature,
+           primary_signature = EXCLUDED.primary_signature`,
       );
     }
 

@@ -1,0 +1,29 @@
+import type { WalletFields } from '@scout/core';
+
+/** One-line docs for every filter field, shown in the policy builder. */
+export const FIELD_DOCS: Record<keyof WalletFields, string> = {
+  score: 'Final score S(w, L) for this launch',
+  hold_quality: 'H: kept past airdrops and graduated positions (0–1)',
+  market_quality: 'Q: trades substance lanes, fits this launch (0–1)',
+  alignment: 'A: SPARK, Vibers, guilds, shipping (−1–1)',
+  dump_score: 'D: sells airdrops fast (0–1)',
+  sybil_score: 'Y: part of an undeclared wallet cluster (0–1)',
+  spark_tier: 'SPARK tier: 0 none, 1 ≥50k, 2 ≥200k, 3 ≥1M',
+  spark_balance: 'SPARK held at the snapshot, whole tokens',
+  viber_level: 'Highest Vibe Viber level held (0 if none)',
+  viber_charged: 'Viber charged in the last 30 days',
+  guild_member: 'Member of a guild in good standing',
+  guild_ids: "Guilds in good standing, e.g. guild_ids HAS 'forge'",
+  scout_drops_received: 'Scout airdrops received before',
+  last_drop_sold_1h: 'Fraction of the last Scout drop sold within 1h (0–1)',
+  markets_traded: 'vibe/vibe launches traded',
+  stock_pair_markets: 'Stock-paired launches traded',
+  stock_pair_share: 'Fraction of traded launches that are stock-paired (0–1)',
+  graduated_positions: 'Positions in launches that graduated',
+  held_substance_days_max: 'Longest hold of a utility/RWA/vibecoded launch, days',
+  created_launches: 'Launches this wallet created',
+  shipped_substance: 'Created a graduated substance launch with live links',
+  created_rug: 'Created a launch flagged as a rug',
+  cluster_size: 'Wallets treated as the same person (declared + detected)',
+  in_creator_cluster: "In the launch creator's cluster (always excluded)",
+};

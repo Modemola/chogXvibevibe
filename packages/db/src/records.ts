@@ -91,6 +91,7 @@ export interface WalletLinkRecord {
   primaryWallet: Address;
   linkedAt: Timestamp;
   signature: `0x${string}` | null;
+  primarySignature?: `0x${string}` | null;
 }
 
 /** Ground-truth labels, written only by the simulator, used to evaluate scoring. */

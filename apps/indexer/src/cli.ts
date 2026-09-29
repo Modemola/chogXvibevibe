@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
   DEFAULT_SCORING_CONFIG,
@@ -31,7 +32,7 @@ import { evaluate, renderReport } from './evaluate.js';
 
 const USAGE = `scout <command> [options]
 
-Database: DATABASE_URL if set, otherwise PGlite at --data (default .data/pglite).
+Database: DATABASE_URL if set, otherwise PGlite at --data (default: <repo>/.data/pglite, shared with the web app).
 
 Commands
   migrate                               Apply schema migrations
@@ -53,7 +54,7 @@ Templates: ${TEMPLATE_IDS.join(', ')}
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
-    data: { type: 'string', default: '.data/pglite' },
+    data: { type: 'string', default: process.env.SCOUT_PGLITE_DIR ?? fileURLToPath(new URL('../../../.data/pglite', import.meta.url)) },
     seed: { type: 'string' },
     wallets: { type: 'string' },
     launches: { type: 'string' },

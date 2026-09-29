@@ -127,4 +127,35 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 2,
+    name: 'web',
+    sql: /* sql */ `
+      CREATE TABLE auth_nonces (
+        nonce      text PRIMARY KEY,
+        created_at bigint NOT NULL,
+        used_at    bigint
+      );
+
+      -- Both wallets sign a link. Existing rows (simulated) have no signatures.
+      ALTER TABLE wallet_links ADD COLUMN primary_signature text;
+
+      -- Content-addressed: the id is the policy hash.
+      CREATE TABLE policies (
+        hash       text PRIMARY KEY,
+        policy     jsonb NOT NULL,
+        created_at bigint NOT NULL
+      );
+
+      -- One locked policy per launch, signed by the launch creator.
+      CREATE TABLE policy_locks (
+        launch_id   text PRIMARY KEY REFERENCES launches(id),
+        policy_hash text NOT NULL REFERENCES policies(hash),
+        creator     text NOT NULL,
+        message     text NOT NULL,
+        signature   text NOT NULL,
+        locked_at   bigint NOT NULL
+      );
+    `,
+  },
 ];

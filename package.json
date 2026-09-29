@@ -10,6 +10,8 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "scout": "pnpm --silent --filter @scout/indexer scout"
+    "scout": "pnpm --silent --filter @scout/indexer scout",
+    "web": "pnpm --filter @scout/web dev",
+    "e2e": "pnpm --filter @scout/web deps && pnpm --filter @scout/web build && pnpm --filter @scout/web e2e"
   }
 }
