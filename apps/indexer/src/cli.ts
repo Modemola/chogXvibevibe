@@ -25,6 +25,7 @@ import {
   loadWalletFacts,
   migrate,
   openDb,
+  runAftermath,
   writeBatch,
 } from '@scout/db';
 import { SPARK_BASE, createBaseClient, simulateWorld, snapshotErc20 } from '@scout/sources';
@@ -40,6 +41,8 @@ Commands
                                         Write a simulated vibe/vibe world
   spark-snapshot --rpc URL --from-block N [--to-block N|latest] [--token 0x..] [--chunk 10000]
                                         Snapshot SPARK (or any ERC-20) holders on Base
+  aftermath [--as-of T]                   Measure Scout drops whose 1h/24h/7d/30d windows have ended
+                                        (default now: latest indexed transfer). Run on a schedule.
   hubs      [--min-fanout 20]           List funders that funded many wallets (sybil ignore candidates)
   facts     <wallet> [--as-of T]        Print the WalletFacts Scout sees for a wallet
   resolve   [--launch ID | --lane L --pair P --creator 0x..] [--template T] [--slice N]
@@ -136,6 +139,7 @@ async function main() {
           farms: int(values.farms, 4),
         });
         await writeBatch(db, world.batch);
+        const am = await runAftermath(db, { now: world.asOf });
         const b = world.batch;
         console.log(
           [
@@ -143,6 +147,7 @@ async function main() {
             `  wallets ${world.personas.size}, profiles ${b.profiles!.length}, launches ${b.launches!.length} (${b.launches!.filter((l) => l.graduatedAt).length} graduated)`,
             `  trades ${b.trades!.length}, scout drops ${b.scoutDrops!.length}, farms ${world.farms.map((f) => `${f.id}(${f.members.length})`).join(' ')}`,
             `  SPARK snapshot ${world.sparkSnapshotId}: ${b.snapshots![0]!.balances.length} holders`,
+            `  aftermath: measured ${am.measured} drops, ${am.windowsWritten} windows from ${b.transfers!.length} token transfers`,
           ].join('\n'),
         );
         break;
@@ -167,6 +172,15 @@ async function main() {
         process.stderr.write('\n');
         await writeBatch(db, { snapshots: [snap] });
         console.log(`Snapshot ${snap.id}: ${snap.balances.length} holders at block ${snap.block}`);
+        break;
+      }
+
+      case 'aftermath': {
+        const run = await runAftermath(db, values['as-of'] ? { now: Number(values['as-of']) } : {});
+        console.log(
+          `Aftermath at ${run.now ? new Date(run.now * 1000).toISOString() : 'n/a'}: ${run.due} drops due, ` +
+            `${run.measured} measured, ${run.unobserved} without an indexed drop transfer, ${run.windowsWritten} windows written`,
+        );
         break;
       }
 

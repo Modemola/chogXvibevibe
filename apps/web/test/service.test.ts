@@ -1,5 +1,5 @@
 import { TEMPLATES, buildMessage, normalizeAddress } from '@scout/core';
-import { type Db, createPgliteDb, migrate, writeBatch } from '@scout/db';
+import { type Db, createPgliteDb, migrate, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { privateKeyToAccount } from 'viem/accounts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -20,6 +20,7 @@ describe('ScoutService', () => {
     db = await createPgliteDb();
     await migrate(db);
     await writeBatch(db, world.batch);
+    await runAftermath(db, { now: world.asOf });
     svc = new ScoutService(db, { now: () => clock, cacheSec: 0 });
   }, 60_000);
   afterAll(async () => {
@@ -115,6 +116,17 @@ describe('ScoutService', () => {
     await expectApiError(svc.preview({ policy: TEMPLATES.custom.policy, launch: { launchId }, sliceTokens: '1.5' }), 400);
     const csv = await svc.exportCsv({ policy: TEMPLATES.custom.policy, launch: { launchId }, sliceTokens: 1000 });
     expect(csv.startsWith('wallet,amount,score,buckets\n')).toBe(true);
+  });
+
+  it('serves the aftermath card for a launch with a Scout drop', async () => {
+    const launch = (await svc.launches()).find((l) => l.drops > 0)!;
+    const a = await svc.aftermath(launch.id);
+    expect(a.recipients.length).toBe(launch.drops);
+    const h1 = a.windows.find((w) => w.window === 'h1')!;
+    expect(h1.measured).toBe(launch.drops);
+    expect(h1.held + h1.trimmed + h1.mostlySold + h1.dumped).toBe(h1.measured);
+    expect(h1.retained).toBeGreaterThan(0);
+    await expectApiError(svc.aftermath('nope'), 404);
   });
 
   it('saves policies by hash and lets only the creator lock one per launch', async () => {

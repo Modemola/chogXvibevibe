@@ -1,5 +1,5 @@
 import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from '@scout/core';
-import { type Db, createPgliteDb, hubFunders, listProfileWallets, loadSimLabels, loadWalletFacts, migrate, writeBatch } from '@scout/db';
+import { type Db, createPgliteDb, hubFunders, listProfileWallets, loadSimLabels, loadWalletFacts, migrate, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { evaluate, renderReport } from '../src/evaluate.js';
@@ -19,6 +19,7 @@ describe('simulate → db → evaluate', () => {
     db = await createPgliteDb();
     await migrate(db);
     await writeBatch(db, world.batch);
+    await runAftermath(db, { now: world.asOf });
     const hubs = await hubFunders(db, 20);
     config = { ...DEFAULT_SCORING_CONFIG, sybil: { ...DEFAULT_SCORING_CONFIG.sybil, ignoredFunders: hubs.map((h) => h.funder) } };
     const wallets = await listProfileWallets(db, world.asOf);
@@ -37,6 +38,19 @@ describe('simulate → db → evaluate', () => {
   });
 
   const row = (p: string) => report.personas.find((r) => r.persona === p)!;
+
+  it('aftermath measures from transfers exactly what the simulator intended', async () => {
+    const rows = await db.query<{ launch_id: string; wallet: string; window: string; sold_bps: number }>(
+      'SELECT launch_id, wallet, "window", sold_bps FROM drop_outcomes',
+    );
+    const measured = new Map(rows.map((r) => [`${r.launch_id}|${r.wallet}|${r.window}`, Number(r.sold_bps)]));
+    // Linked wallets are measured as one holder; compare only recipients whose holder got a single drop per launch.
+    const linked = new Set(world.batch.links!.flatMap((l) => [l.wallet, l.primaryWallet]));
+    const comparable = world.intendedOutcomes.filter((o) => !linked.has(o.wallet));
+    expect(comparable.length).toBeGreaterThan(1_000);
+    for (const o of comparable) expect(measured.get(`${o.launchId}|${o.wallet}|${o.window}`), `${o.launchId} ${o.wallet} ${o.window}`).toBe(o.soldBps);
+    expect(measured.size).toBe(world.intendedOutcomes.length);
+  });
 
   it('finds exactly the simulated exchange hot wallets as hubs', async () => {
     const hubs = (await hubFunders(db, 20)).map((h) => h.funder).sort();

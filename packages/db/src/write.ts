@@ -166,6 +166,29 @@ export async function writeBatch(db: Db, batch: RecordBatch): Promise<void> {
       );
     }
 
+    if (batch.transfers?.length) {
+      await insertRows(
+        tx,
+        'transfers',
+        [
+          col('token', 'text'), col('tx_hash', 'text'), col('log_index', 'integer'), col('from', 'text'),
+          col('to', 'text'), col('amount', 'numeric'), col('ts', 'bigint'),
+        ],
+        batch.transfers.map((t) => [t.token, t.txHash, t.logIndex, t.from, t.to, t.amount, t.ts]),
+        'ON CONFLICT DO NOTHING',
+      );
+    }
+
+    if (batch.holdContracts?.length) {
+      await insertRows(
+        tx,
+        'hold_contracts',
+        [col('address', 'text'), col('label', 'text')],
+        batch.holdContracts.map((h) => [h.address, h.label]),
+        'ON CONFLICT (address) DO UPDATE SET label = EXCLUDED.label',
+      );
+    }
+
     if (batch.simLabels?.length) {
       await insertRows(
         tx,

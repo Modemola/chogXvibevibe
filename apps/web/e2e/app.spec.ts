@@ -102,6 +102,15 @@ test('policy builder previews live, validates, and exports CSV', async ({ page }
   expect(Buffer.concat(content).toString().split('\n')[0]).toBe('wallet,amount,score,buckets');
 });
 
+test('aftermath card shows who held and who dumped', async ({ page }) => {
+  await page.goto('/launches');
+  await page.getByRole('link', { name: /Aftermath/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'After 1 hour' })).toBeVisible();
+  await expect(page.getByText('still held').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Recipients' })).toBeVisible();
+  await page.screenshot({ path: 'e2e/screens/aftermath.png', fullPage: true });
+});
+
 test('works on a phone-sized screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/builder');

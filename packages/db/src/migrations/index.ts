@@ -158,4 +158,32 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 3,
+    name: 'aftermath',
+    sql: /* sql */ `
+      -- Transfers of launched tokens. The aftermath job measures drops from these.
+      CREATE TABLE transfers (
+        token     text NOT NULL,
+        tx_hash   text NOT NULL,
+        log_index integer NOT NULL,
+        "from"    text NOT NULL,
+        "to"      text NOT NULL,
+        amount    numeric(78,0) NOT NULL,
+        ts        bigint NOT NULL,
+        PRIMARY KEY (tx_hash, log_index)
+      );
+      CREATE INDEX transfers_token_from_idx ON transfers (token, "from", ts);
+      CREATE INDEX transfers_token_to_idx ON transfers (token, "to", ts);
+      CREATE INDEX transfers_ts_idx ON transfers (ts);
+
+      -- Lockers / staking vaults: moving tokens there is not selling.
+      CREATE TABLE hold_contracts (
+        address text PRIMARY KEY,
+        label   text NOT NULL
+      );
+
+      ALTER TABLE drop_outcomes ADD COLUMN measured_at bigint;
+    `,
+  },
 ];

@@ -1,6 +1,7 @@
 import type { Address, Lane, PairClass } from '@scout/core';
 import type {
   DropOutcomeRecord,
+  TransferRecord,
   DropWindow,
   FundingRecord,
   LaunchRecord,
@@ -58,6 +59,16 @@ export interface SimWorld {
   cexFunders: Address[];
   personas: Map<Address, Persona>;
   farms: { id: string; style: FarmStyle; members: Address[] }[];
+  /** What each drop recipient was simulated to sell, per elapsed window. Aftermath should measure exactly this. */
+  intendedOutcomes: DropOutcomeRecord[];
+}
+
+/** Fixed simulated addresses (not drawn from the RNG, so they're stable). */
+export const SIM_SCOUT_SENDER: Address = '0x5c0075e4de000000000000000000000000000001';
+export const SIM_LOCKER: Address = '0x10c1e400000000000000000000000000000000aa';
+export function simPool(launchId: string): Address {
+  const n = Number(launchId.replace(/\D/g, '')) || 0;
+  return `0x9001${n.toString(16).padStart(36, '0')}` as Address;
 }
 
 const DAY = 86_400;
@@ -346,29 +357,53 @@ export function simulateWorld(options: SimOptions = {}): SimWorld {
     .map((w) => ({ wallet: w.wallet, primaryWallet: w.linkedTo!, linkedAt: optedInAt.get(w.wallet)!, signature: null }));
 
   // --- Scout drops ------------------------------------------------------------------
+  // Drops are emitted as token transfers (sender → recipient, recipient → pool),
+  // so the aftermath job measures them exactly as it would on-chain. What each
+  // persona *meant* to do is kept in `intendedOutcomes` to check the measurement.
   const scoutDrops: ScoutDropRecord[] = [];
-  const dropOutcomes: DropOutcomeRecord[] = [];
+  const intendedOutcomes: DropOutcomeRecord[] = [];
+  const transfers: TransferRecord[] = [];
+  const locker = SIM_LOCKER;
   for (const l of launches) {
     if (l.graduatedAt === undefined || l.graduatedAt > asOf - HOUR || !r.chance(0.55)) continue;
     const receivedAt = l.graduatedAt + 60;
+    const pool = simPool(l.id);
     const eligible = [...optedInAt.entries()]
       .filter(([w, at]) => at <= receivedAt && w !== l.creator)
       .map(([w]) => w)
       .sort();
     for (const w of r.sample(eligible, r.int(15, 50))) {
-      scoutDrops.push({ launchId: l.id, wallet: w, amount: r.whole(1_000, 50_000), receivedAt });
-      const b = BEHAVIOUR[byAddress.get(w)!.persona];
+      const amount = r.whole(1_000, 50_000);
+      scoutDrops.push({ launchId: l.id, wallet: w, amount, receivedAt });
+      transfers.push({ token: l.token, txHash: txHash(), logIndex: 0, from: SIM_SCOUT_SENDER, to: w, amount, ts: receivedAt });
+      const persona = byAddress.get(w)!.persona;
+      const b = BEHAVIOUR[persona];
       let sold = 0;
+      let prevCum = 0n;
+      let prevEnd = receivedAt;
       WINDOW_SECONDS.forEach(([window, len], i) => {
         const maxStep = b.drop[i]!;
         if (i === 0) sold = Math.max(b.dropFloor1h ?? 0, r.float(0, maxStep));
         else sold = Math.min(1, sold + (1 - sold) * r.float(0, maxStep));
-        if (receivedAt + len <= asOf) {
-          dropOutcomes.push({ launchId: l.id, wallet: w, window, soldBps: Math.round(Math.min(1, sold) * 10_000) });
+        const bps = Math.round(Math.min(1, sold) * 10_000);
+        const cum = (amount * BigInt(bps)) / 10_000n;
+        const end = receivedAt + len;
+        if (cum > prevCum) {
+          const ts = r.int(prevEnd + 1, end);
+          if (ts <= asOf) transfers.push({ token: l.token, txHash: txHash(), logIndex: 0, from: w, to: pool, amount: cum - prevCum, ts });
         }
+        if (end <= asOf) intendedOutcomes.push({ launchId: l.id, wallet: w, window, soldBps: bps });
+        prevCum = cum;
+        prevEnd = end;
       });
+      // Some long-term holders stake part of the drop. Staking is not selling.
+      if ((persona === 'diamond' || persona === 'builder') && r.chance(0.25)) {
+        const ts = receivedAt + r.int(2 * HOUR, 20 * HOUR);
+        if (ts <= asOf) transfers.push({ token: l.token, txHash: txHash(), logIndex: 0, from: w, to: locker, amount: (amount * 4n) / 10n, ts });
+      }
     }
   }
+  transfers.sort((a, b) => a.ts - b.ts || a.txHash.localeCompare(b.txHash));
 
   // --- SPARK snapshot ------------------------------------------------------------------
   const sparkBalances: { wallet: Address; balance: bigint }[] = [];
@@ -410,7 +445,8 @@ export function simulateWorld(options: SimOptions = {}): SimWorld {
     trades,
     funding,
     scoutDrops,
-    dropOutcomes,
+    transfers,
+    holdContracts: [{ address: SIM_LOCKER, label: 'Simulated staking vault' }],
     snapshots: [
       {
         id: sparkSnapshotId,
@@ -436,5 +472,6 @@ export function simulateWorld(options: SimOptions = {}): SimWorld {
     cexFunders,
     personas: new Map(wallets.map((w) => [w.wallet, w.persona])),
     farms,
+    intendedOutcomes,
   };
 }

@@ -34,6 +34,7 @@ import {
   hubFunders,
   latestSnapshotId,
   listProfileWallets,
+  loadLaunchAftermath,
   loadLaunchContext,
   loadWalletFacts,
 } from '@scout/db';
@@ -163,8 +164,10 @@ export class ScoutService {
       created_at: string;
       graduated_at: string | null;
       policy_hash: string | null;
+      drops: number;
     }>(
-      `SELECT l.id, l.creator, l.lane, l.pair_class, l.created_at, l.graduated_at, pl.policy_hash
+      `SELECT l.id, l.creator, l.lane, l.pair_class, l.created_at, l.graduated_at, pl.policy_hash,
+              (SELECT count(*)::int FROM scout_drops d WHERE d.launch_id = l.id) AS drops
          FROM launches l LEFT JOIN policy_locks pl ON pl.launch_id = l.id
         ORDER BY l.created_at DESC, l.id LIMIT $1`,
       [limit],
@@ -177,7 +180,37 @@ export class ScoutService {
       createdAt: Number(r.created_at),
       graduatedAt: r.graduated_at === null ? null : Number(r.graduated_at),
       lockedPolicy: r.policy_hash,
+      drops: Number(r.drops),
     }));
+  }
+
+  /** Public Aftermath card: who held and who dumped a launch's Scout drop. */
+  async aftermath(launchId: string) {
+    const [launch] = await this.db.query<{ id: string; lane: Lane; pair_class: PairClass; creator: string; graduated_at: string | null; token: string }>(
+      'SELECT id, lane, pair_class, creator, graduated_at, token FROM launches WHERE id = $1',
+      [launchId],
+    );
+    if (!launch) throw new ApiError(404, `Launch ${launchId} not found`);
+    const am = await loadLaunchAftermath(this.db, launchId);
+    const order = ['d30', 'd7', 'h24', 'h1'] as const;
+    const latest = (sold: Partial<Record<(typeof order)[number], number>>) => {
+      for (const w of order) if (sold[w] !== undefined) return sold[w]!;
+      return -1;
+    };
+    return {
+      launch: {
+        id: launch.id,
+        lane: launch.lane,
+        pairClass: launch.pair_class,
+        creator: launch.creator,
+        token: launch.token,
+        graduatedAt: launch.graduated_at === null ? null : Number(launch.graduated_at),
+      },
+      windows: am.windows,
+      totalAmount: am.recipients.reduce((s, r) => s + r.amount, 0n),
+      // Holders first, then by amount, so the page leads with who stayed.
+      recipients: am.recipients.sort((a, b) => latest(a.sold) - latest(b.sold) || (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0)),
+    };
   }
 
   async profile(walletInput: string, opts: { template?: string; lane?: string; pairClass?: string; asOf?: number } = {}) {

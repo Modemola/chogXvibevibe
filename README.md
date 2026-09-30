@@ -43,7 +43,8 @@ Both produce identical results.
 ### Try it
 
 ```bash
-pnpm scout simulate                                    # simulated world: 450 wallets, 80 launches, 4 sybil farms
+pnpm scout simulate                                    # simulated world: 450 wallets, 80 launches, 4 sybil farms, drops measured by aftermath
+pnpm scout aftermath                                   # measure drops whose windows have ended (run on a schedule)
 pnpm scout hubs                                        # funders that funded many wallets (exchange hot wallets)
 pnpm scout evaluate --ignore-hubs 20                   # score every profile against the simulator's ground truth
 pnpm scout resolve --launch sim-0010 --template hold_or_die --ignore-hubs 20 --out alloc.csv
@@ -63,7 +64,8 @@ pnpm web                 # builds the packages, then http://localhost:3000
 | `/join` | Connect a browser wallet, sign to opt in. Link an alt: the alt signs, you switch accounts, the primary signs the same message |
 | `/profile/<wallet>` | Score, every reason with its contribution, H/Q/A/D/Y components, which templates the wallet matches, Scout drop history, detected wallet links. Rescore for any template, lane and pair |
 | `/builder` | Pick a template and launch, edit buckets, filters, caps and excludes, and see the resolved allocation update live. Download the CSV or policy JSON, save the policy (content hash), or lock it to a launch with the creator's signature |
-| `/launches` | Indexed launches, their creators and locked policies |
+| `/launches` | Indexed launches, their creators, locked policies and Scout drops |
+| `/launches/<id>` | The public Aftermath card: share still held and held / trimmed / mostly sold / dumped counts after 1h, 24h, 7d and 30d, and every recipient's numbers |
 
 Signing is plain `personal_sign` on messages with a server nonce, valid for 10 minutes and usable once. No transactions and
 no network switching. Smart-contract wallets (ERC-1271) aren't supported yet.
@@ -81,6 +83,7 @@ no network switching. Smart-contract wallets (ERC-1271) aren't supported yet.
 | POST | `/api/export` | same as preview → CSV |
 | POST | `/api/policies` · GET `/api/policies/:hash` | `{ policy }` → `{ hash }` |
 | POST | `/api/locks` | `{ message, signature }` from the launch creator |
+| GET | `/api/launches/:id/aftermath` | per-window summary and per-recipient sold % |
 
 | Env var | Default | |
 |---|---|---|
@@ -109,15 +112,15 @@ before relying on a snapshot. The RPC host has to be reachable from wherever you
 
 ```
 persona        wallets  mean score  share of allocation
-builder             22       0.477                12.1%
-diamond             76       0.461                41.2%
-stock_native        37       0.393                18.9%
-whale               10       0.370                 6.2%
-newbie              68       0.246                11.5%
-trencher            73       0.231                 6.9%
-dumper              38      -0.037                 3.1%
-rugger              12      -0.076                 0.0%
-farm                37      -0.813                 0.0%
+builder             22       0.501                12.0%
+diamond             76       0.474                40.9%
+stock_native        37       0.393                17.7%
+whale               10       0.340                 6.2%
+newbie              68       0.250                12.7%
+trencher            73       0.221                 8.0%
+dumper              38      -0.137                 2.5%
+rugger              12      -0.226                 0.0%
+farm                37      -0.890                 0.0%
 
 farm               members  flagged
 naive-0                  6        6      same funder, identical buys
@@ -131,6 +134,23 @@ False positives: 0 of 336 non-farm wallets (8 before ignoring the 3 exchange hot
 The staggered farm evades clustering but still gets nothing, because it dumps every drop.
 The simulator is not calibrated to real vibe/vibe data; it's a world containing the behaviours Scout has to tell apart.
 The end-to-end test (`apps/indexer/test/pipeline.test.ts`) locks these properties in.
+
+## Aftermath
+
+After a drop, `scout aftermath` measures what every recipient did, from token `Transfer`s alone, at 1h, 24h, 7d and 30d.
+Those numbers become the H (hold) and D (dump) history in every later score.
+
+- **Sold by window W** = balance right after the drop − lowest balance up to `receivedAt + W`, capped at the amount received.
+  Buying back later doesn't undo a sale, and selling tokens held before the drop counts (they're fungible).
+- **The holder is the recipient plus its declared linked wallets.** Moving tokens between them isn't selling.
+- **Moving tokens into a listed hold contract isn't selling** (lockers, staking vaults; table `hold_contracts`, reviewed by the operator).
+  Any other outflow is.
+- **Windows close at the indexer's head** (the newest indexed transfer), not the wall clock, so indexer lag can't make a dumper look like a holder.
+- A drop whose receiving transfer isn't indexed is reported as unobserved and left unmeasured, never guessed.
+- The job is idempotent and only touches drops with a window due. Run it every few minutes.
+
+The simulator emits real drop and sell transfers. The end-to-end test checks that the job recovers the sold percentage
+the simulator intended, window by window, for every recipient without linked wallets (thousands of windows).
 
 ## Scoring model
 
@@ -204,5 +224,5 @@ A bare boolean field means `== true`.
 - [x] **Milestone 1: core engine** (`@scout/core`)
 - [x] **Milestone 2: data layer**: Postgres schema, SPARK snapshotter, simulated world, `scout` CLI, evaluation
 - [x] **Milestone 3: API + web app**: signed opt-in and linking, profiles, policy builder with live preview, export, policy locks
-- [ ] Milestone 4: Aftermath jobs + pages
+- [x] **Milestone 4: Aftermath**: transfer-based measurement job, per-launch Aftermath cards, API
 - [ ] Milestone 5: ScoutSender contract + real vibe/vibe testnet source

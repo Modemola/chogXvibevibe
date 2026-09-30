@@ -20,7 +20,14 @@ describe('simulateWorld', () => {
       expect(t.ts).toBeLessThanOrEqual(world.asOf);
     }
     const drops = new Set(b.scoutDrops!.map((d) => `${d.launchId}|${d.wallet}`));
-    for (const o of b.dropOutcomes!) expect(drops.has(`${o.launchId}|${o.wallet}`)).toBe(true);
+    for (const o of world.intendedOutcomes) expect(drops.has(`${o.launchId}|${o.wallet}`)).toBe(true);
+    expect(b.dropOutcomes).toBeUndefined(); // measured by the aftermath job, not written by the simulator
+    const tokens = new Set(b.launches!.map((l) => l.token));
+    for (const t of b.transfers!) {
+      expect(tokens.has(t.token)).toBe(true);
+      expect(t.ts).toBeLessThanOrEqual(world.asOf);
+    }
+    expect(new Set(b.transfers!.map((t) => t.txHash)).size).toBe(b.transfers!.length);
     const txKeys = new Set(b.trades!.map((t) => `${t.txHash}|${t.logIndex}`));
     expect(txKeys.size).toBe(b.trades!.length);
   });
@@ -35,9 +42,9 @@ describe('simulateWorld', () => {
     expect(b.scoutDrops!.length).toBeGreaterThan(100);
   });
 
-  it('drop outcomes are monotone and only for elapsed windows', () => {
+  it('intended drop outcomes are monotone', () => {
     const byKey = new Map<string, Record<string, number>>();
-    for (const o of b.dropOutcomes!) {
+    for (const o of world.intendedOutcomes) {
       const m = byKey.get(`${o.launchId}|${o.wallet}`) ?? {};
       m[o.window] = o.soldBps;
       byKey.set(`${o.launchId}|${o.wallet}`, m);

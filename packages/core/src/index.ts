@@ -13,3 +13,4 @@ export * from './merkle.js';
 export * from './resolve.js';
 export * from './export.js';
 export * from './auth.js';
+export * from './aftermath.js';

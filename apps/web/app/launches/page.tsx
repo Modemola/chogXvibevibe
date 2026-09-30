@@ -27,6 +27,7 @@ export default async function LaunchesPage() {
                 <th>Created</th>
                 <th>Graduated</th>
                 <th>Policy</th>
+                <th className="num">Scout drop</th>
                 <th />
               </tr>
             </thead>
@@ -44,6 +45,9 @@ export default async function LaunchesPage() {
                   <td>{date(l.createdAt)}</td>
                   <td>{l.graduatedAt ? date(l.graduatedAt) : <span className="muted">–</span>}</td>
                   <td>{l.lockedPolicy ? <span className="chip good mono">{l.lockedPolicy.slice(0, 10)}</span> : <span className="muted">–</span>}</td>
+                  <td className="num">
+                    {l.drops ? <Link href={`/launches/${encodeURIComponent(l.id)}`}>{l.drops} · Aftermath</Link> : <span className="muted">–</span>}
+                  </td>
                   <td>
                     <Link href={`/builder?launch=${encodeURIComponent(l.id)}`}>Preview</Link>
                   </td>

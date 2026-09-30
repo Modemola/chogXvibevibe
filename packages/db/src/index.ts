@@ -4,3 +4,4 @@ export * from './records.js';
 export * from './write.js';
 export * from './facts.js';
 export { MIGRATIONS, type Migration } from './migrations/index.js';
+export * from './aftermath.js';

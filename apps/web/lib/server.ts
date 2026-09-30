@@ -1,6 +1,6 @@
 import 'server-only';
 import path from 'node:path';
-import { type Db, migrate, openDb, writeBatch } from '@scout/db';
+import { type Db, migrate, openDb, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { NextResponse } from 'next/server';
 import { ApiError, ScoutService, toJson } from './service';
@@ -20,7 +20,9 @@ async function init() {
     const [row] = await db.query<{ n: string }>('SELECT count(*)::text AS n FROM launches');
     if (row?.n === '0') {
       console.log('[scout] empty database, seeding simulated world (SCOUT_SIMULATE=1)');
-      await writeBatch(db, simulateWorld().batch);
+      const world = simulateWorld();
+      await writeBatch(db, world.batch);
+      await runAftermath(db, { now: world.asOf });
     }
   }
   const fanout = process.env.SCOUT_IGNORE_HUBS_MIN_FANOUT;

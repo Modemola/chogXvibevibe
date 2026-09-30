@@ -94,6 +94,22 @@ export interface WalletLinkRecord {
   primarySignature?: `0x${string}` | null;
 }
 
+/** A Transfer of a launched token. */
+export interface TransferRecord {
+  token: Address;
+  txHash: `0x${string}`;
+  logIndex: number;
+  from: Address;
+  to: Address;
+  amount: bigint;
+  ts: Timestamp;
+}
+
+export interface HoldContractRecord {
+  address: Address;
+  label: string;
+}
+
 /** Ground-truth labels, written only by the simulator, used to evaluate scoring. */
 export interface SimLabelRecord {
   wallet: Address;
@@ -113,4 +129,6 @@ export interface RecordBatch {
   profiles?: ProfileRecord[];
   links?: WalletLinkRecord[];
   simLabels?: SimLabelRecord[];
+  transfers?: TransferRecord[];
+  holdContracts?: HoldContractRecord[];
 }
