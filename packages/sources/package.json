@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@scout/contracts": "workspace:*",
     "@scout/core": "workspace:*",
     "@scout/db": "workspace:*",
     "viem": "^2.57.0"

@@ -28,8 +28,10 @@ import {
   runAftermath,
   writeBatch,
 } from '@scout/db';
-import { SPARK_BASE, createBaseClient, simulateWorld, snapshotErc20 } from '@scout/sources';
+import { BURN_SINK, createDropArgs, claimBatches } from '@scout/contracts';
+import { SPARK_BASE, createBaseClient, createRpcClient, simulateWorld, snapshotErc20 } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
+import { ingestScoutDrops } from './onchain.js';
 
 const USAGE = `scout <command> [options]
 
@@ -46,8 +48,11 @@ Commands
   hubs      [--min-fanout 20]           List funders that funded many wallets (sybil ignore candidates)
   facts     <wallet> [--as-of T]        Print the WalletFacts Scout sees for a wallet
   resolve   [--launch ID | --lane L --pair P --creator 0x..] [--template T] [--slice N]
-            [--as-of T] [--out file.csv] [--ignore-hubs 20]
-                                        Resolve an allocation over all opted-in profiles
+            [--as-of T] [--out file.csv] [--drop-out drop.json] [--token 0x..] [--ignore-hubs 20]
+                                        Resolve an allocation over all opted-in profiles.
+                                        --drop-out writes ScoutDrop createDrop args + claim batches with proofs
+  ingest-drops --rpc URL --contract 0x.. --from-block N [--to-block N|latest] [--chunk 2000]
+                                        Read ScoutDrop events and launch-token transfers, then run aftermath
   evaluate  [--template T] [--ignore-hubs 20] [--as-of T]
                                         Score simulated profiles against ground truth
 
@@ -77,6 +82,8 @@ const { positionals, values } = parseArgs({
     slice: { type: 'string' },
     out: { type: 'string' },
     'ignore-hubs': { type: 'string' },
+    'drop-out': { type: 'string' },
+    contract: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -184,6 +191,30 @@ async function main() {
         break;
       }
 
+      case 'ingest-drops': {
+        if (!values.rpc || !values.contract || values['from-block'] === undefined) {
+          throw new Error('--rpc, --contract and --from-block are required');
+        }
+        const client = createRpcClient(values.rpc);
+        const toBlock =
+          values['to-block'] === undefined || values['to-block'] === 'latest' ? await client.getBlockNumber() : BigInt(values['to-block']);
+        const r = await ingestScoutDrops(db, {
+          client,
+          contract: normalizeAddress(values.contract),
+          startBlock: BigInt(values['from-block']),
+          toBlock,
+          chunkSize: BigInt(values.chunk ?? '2000'),
+          now: Math.floor(Date.now() / 1000),
+        });
+        console.log(
+          `Blocks ${r.fromBlock}..${r.toBlock}: ${r.drops} new drop(s), ${r.claims} claim(s) (${r.claimsRecorded} recorded), ${r.transfers} token transfer(s)`,
+        );
+        if (r.unknownTokens.length) console.log(`  ! drops for tokens not in launches: ${r.unknownTokens.join(', ')}`);
+        const am = await runAftermath(db);
+        console.log(`Aftermath: ${am.measured} measured, ${am.unobserved} unobserved, ${am.windowsWritten} windows written`);
+        break;
+      }
+
       case 'hubs': {
         for (const h of await hubFunders(db, int(values['min-fanout'], 20))) console.log(`${h.funder}  ${h.fanout}`);
         break;
@@ -243,6 +274,18 @@ async function main() {
         if (values.out) {
           writeFileSync(values.out, allocationToCsv(set));
           console.log(`\nWrote ${values.out}`);
+        }
+        if (values['drop-out']) {
+          const [tokenRow] = await db.query<{ token: string }>('SELECT token FROM launches WHERE id = $1', [launch.launchId]);
+          const token = values.token ?? tokenRow?.token;
+          if (!token) throw new Error('--drop-out needs --token for an ad-hoc launch');
+          const [t, root, policyHash, total, period, sink] = createDropArgs(set, { token: normalizeAddress(token), sink: BURN_SINK });
+          const drop = {
+            createDrop: { token: t, merkleRoot: root, policyHash, total: total.toString(), claimPeriodSec: Number(period), sink },
+            claimMany: claimBatches(set).map((b) => ({ accounts: b.accounts, amounts: b.amounts.map(String), proofs: b.proofs })),
+          };
+          writeFileSync(values['drop-out'], JSON.stringify(drop, null, 2));
+          console.log(`Wrote ${values['drop-out']} (${drop.claimMany.length} claim batch(es))`);
         }
         break;
       }

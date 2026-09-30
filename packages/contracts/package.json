@@ -1,0 +1,37 @@
+{
+  "name": "@scout/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ScoutDrop: Merkle airdrop distributor for Scout graduation drops",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "compile": "node scripts/compile.mjs",
+    "build": "node scripts/compile.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@scout/core": "workspace:*",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "@types/node": "^26.6.3",
+    "ganache": "^7.9.2",
+    "solc": "0.8.28",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

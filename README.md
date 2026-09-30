@@ -20,7 +20,7 @@ packages/db        Postgres schema, migrations, idempotent writers, WalletFacts 
 packages/sources   Data sources: ERC-20 holder snapshots (SPARK on Base), simulated vibe/vibe world
 apps/indexer       `scout` CLI: migrate, simulate, snapshot, resolve, evaluate
 apps/web           Next.js app + JSON API: opt-in, profiles, policy builder, export, policy locks
-contracts          ScoutSender / claim contract                                             (milestone 5)
+packages/contracts ScoutDrop: Merkle airdrop contract (Solidity), ABI, claim-batch helpers, test chain
 ```
 
 Data flows one way. A source emits normalized records (`packages/db/src/records.ts`),
@@ -49,6 +49,7 @@ pnpm scout hubs                                        # funders that funded man
 pnpm scout evaluate --ignore-hubs 20                   # score every profile against the simulator's ground truth
 pnpm scout resolve --launch sim-0010 --template hold_or_die --ignore-hubs 20 --out alloc.csv
 pnpm scout facts 0x…                                   # what Scout knows about one wallet
+pnpm scout resolve --launch sim-0010 --template hold_or_die --drop-out drop.json   # ScoutDrop args + claim batches with proofs
 ```
 
 ### Web app
@@ -152,6 +153,37 @@ Those numbers become the H (hold) and D (dump) history in every later score.
 The simulator emits real drop and sell transfers. The end-to-end test checks that the job recovers the sold percentage
 the simulator intended, window by window, for every recipient without linked wallets (thousands of windows).
 
+## On-chain: ScoutDrop
+
+[`packages/contracts/contracts/ScoutDrop.sol`](packages/contracts/contracts/ScoutDrop.sol) holds a launch's graduation
+airdrop and pays it out against the Merkle root Scout produced.
+
+- **`createDrop(token, merkleRoot, policyHash, total, claimPeriod, sink)`**: the creator deposits exactly the allocated
+  total. Fee-on-transfer deposits revert, because an underfunded drop can't pay everyone.
+  `policyHash` commits to the Scout policy, so anyone can re-resolve and check the list.
+- **`claim` / `claimMany`**: anyone can submit claims, and tokens always go to the recipient. A keeper can push the
+  whole list at graduation (about 70k gas per claim, batches of 100).
+- **`sweep`**: no cancel. After the claim period (1–365 days), unclaimed tokens go to the `sink` fixed at creation
+  (a burn address by default), and anyone can trigger it.
+- Each drop pays out at most its own deposit, so drops sharing a token can't touch each other's funds.
+- Leaves are OpenZeppelin `StandardMerkleTree` `(address, uint256)`, exactly what `@scout/core` builds.
+
+It compiles with solc-js (0.8.28, Shanghai target, runs on Arbitrum Orbit chains such as Robinhood Chain) and is tested
+on an in-process EVM (Ganache), so nothing needs downloading. **Not audited.** Get an audit before real value goes through it.
+
+```bash
+pnpm --filter @scout/contracts build                                                # compile + types
+DEPLOYER_PRIVATE_KEY=0x… node packages/contracts/scripts/deploy.mjs --rpc <url>    # deploy
+pnpm scout ingest-drops --rpc <url> --contract <address> --from-block <deploy block>  # index, then aftermath
+```
+
+`ingest-drops` reads `DropCreated`, `Claimed` and `Swept`, links each drop to a launch by token, follows that token's
+transfers from a per-token cursor, and records every claim as a Scout drop at the amount actually received.
+Then it runs aftermath. `apps/indexer/test/onchain.test.ts` runs the whole loop on a local chain:
+resolve → fund → keeper claims → recipients dump, trim, stake or hold → ingest → aftermath measures each one correctly.
+
+The builder's **Download claims + proofs** button (and `POST /api/export?format=claims`) gives the same data for the web flow.
+
 ## Scoring model
 
 For wallet `w` and launch `L`:
@@ -225,4 +257,5 @@ A bare boolean field means `== true`.
 - [x] **Milestone 2: data layer**: Postgres schema, SPARK snapshotter, simulated world, `scout` CLI, evaluation
 - [x] **Milestone 3: API + web app**: signed opt-in and linking, profiles, policy builder with live preview, export, policy locks
 - [x] **Milestone 4: Aftermath**: transfer-based measurement job, per-launch Aftermath cards, API
-- [ ] Milestone 5: ScoutSender contract + real vibe/vibe testnet source
+- [x] **Milestone 5a: ScoutDrop contract**, chain ingest, drop files, deploy script
+- [ ] Milestone 5b: real vibe/vibe testnet source (needs contract addresses + Robinhood Chain testnet RPC)

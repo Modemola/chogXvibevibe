@@ -5,7 +5,7 @@
   "description": "Graduation Scout web app and API",
   "type": "module",
   "scripts": {
-    "deps": "pnpm --filter @scout/core --filter @scout/db --filter @scout/sources build",
+    "deps": "pnpm --filter @scout/core --filter @scout/db --filter @scout/contracts --filter @scout/sources build",
     "dev": "pnpm deps && next dev",
     "build": "next build",
     "start": "next start",

@@ -186,4 +186,30 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE drop_outcomes ADD COLUMN measured_at bigint;
     `,
   },
+  {
+    id: 4,
+    name: 'onchain_drops',
+    sql: /* sql */ `
+      -- ScoutDrop contract drops, as read from chain events.
+      CREATE TABLE onchain_drops (
+        contract    text NOT NULL,
+        drop_id     numeric(78,0) NOT NULL,
+        token       text NOT NULL,
+        creator     text NOT NULL,
+        launch_id   text REFERENCES launches(id),
+        merkle_root text NOT NULL,
+        policy_hash text NOT NULL,
+        total       numeric(78,0) NOT NULL,
+        deadline    bigint NOT NULL,
+        sink        text NOT NULL,
+        created_at  bigint NOT NULL,
+        tx_hash     text NOT NULL,
+        claimed     numeric(78,0) NOT NULL DEFAULT 0,
+        swept_at    bigint,
+        PRIMARY KEY (contract, drop_id)
+      );
+      CREATE INDEX onchain_drops_launch_idx ON onchain_drops (launch_id);
+      CREATE INDEX onchain_drops_token_idx ON onchain_drops (token);
+    `,
+  },
 ];

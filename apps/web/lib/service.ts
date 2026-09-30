@@ -16,6 +16,7 @@ import {
   type TemplateId,
   type WalletFacts,
   allocationToCsv,
+  allocationToJson,
   clusterWallets,
   compilePolicy,
   computeFields,
@@ -326,6 +327,11 @@ export class ScoutService {
 
   async exportCsv(input: { policy: unknown; launch: LaunchSpec; sliceTokens: string | number; asOf?: number }): Promise<string> {
     return allocationToCsv(await this.resolve(input));
+  }
+
+  /** Full allocation with a Merkle proof per recipient, for ScoutDrop claims. */
+  async exportClaims(input: { policy: unknown; launch: LaunchSpec; sliceTokens: string | number; asOf?: number }) {
+    return allocationToJson(await this.resolve(input), { proofs: true });
   }
 
   async savePolicy(policyInput: unknown): Promise<{ hash: `0x${string}` }> {

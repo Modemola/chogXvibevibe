@@ -178,6 +178,16 @@ export default function PolicyBuilder({ launches, initialLaunch }: { launches: L
     download(`scout-${preview?.launchId ?? 'allocation'}.csv`, await res.text(), 'text/csv');
   };
 
+  const onClaims = async () => {
+    setStatus(undefined);
+    try {
+      const data = await api<unknown>('/api/export?format=claims', { body: { policy, launch, slice } });
+      download(`scout-claims-${preview?.launchId ?? 'allocation'}.json`, JSON.stringify(data, null, 2), 'application/json');
+    } catch (e) {
+      setStatus((e as Error).message);
+    }
+  };
+
   const onSave = async () => {
     try {
       const { hash } = await api<{ hash: string }>('/api/policies', { body: { policy } });
@@ -485,6 +495,9 @@ export default function PolicyBuilder({ launches, initialLaunch }: { launches: L
           <h3>Use this policy</h3>
           <button className="primary" onClick={onExport} disabled={!preview}>
             Download recipients CSV
+          </button>
+          <button onClick={onClaims} disabled={!preview}>
+            Download claims + proofs (ScoutDrop)
           </button>
           <button onClick={() => download('scout-policy.json', JSON.stringify(policy, null, 2), 'application/json')}>Download policy JSON</button>
           <button onClick={onSave}>Save policy (get its hash)</button>
