@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* Domain-warped fbm aurora: violet, cyan and molten gold drifting in near-black. */
+/* Domain-warped fbm mist: a faint silver haze drifting in near-black. */
 const FRAG = /* glsl */ `
 precision highp float;
 uniform float t;
@@ -33,12 +33,14 @@ void main(){
   vec2 q = vec2(fbm(p*1.3 + tt), fbm(p*1.3 + vec2(5.2,1.3) - tt));
   vec2 r = vec2(fbm(p*1.5 + 3.0*q + vec2(1.7,9.2) + tt*1.3), fbm(p*1.5 + 3.0*q + vec2(8.3,2.8) - tt));
   float f = fbm(p*1.15 + 2.4*r + mouse*0.12);
-  vec3 col = vec3(0.010, 0.012, 0.028);
-  col = mix(col, vec3(0.30, 0.19, 0.86)*0.55, smoothstep(0.30, 0.82, f));
-  col = mix(col, vec3(0.16, 0.62, 0.92)*0.40, smoothstep(0.45, 0.90, r.x) * 0.7);
-  col = mix(col, vec3(0.96, 0.66, 0.30)*0.42, smoothstep(0.52, 0.95, q.y + 0.12*sin(tt*4.0 + scroll)) * 0.55);
-  col *= mix(0.62, 1.1, smoothstep(-0.8, 0.7, p.y - scroll*0.18));
-  col *= 1.0 - 0.5*length(uv - vec2(0.5, 0.45));
+  // Silver noir: near-black with a faint drifting metallic mist, lit from above.
+  vec3 col = vec3(0.016, 0.018, 0.022);
+  float mist = smoothstep(0.35, 0.95, f);
+  col += vec3(0.60, 0.64, 0.70) * mist * 0.11;
+  col += vec3(0.72, 0.76, 0.82) * smoothstep(0.55, 1.0, r.x) * 0.05;
+  // a cool overhead key light
+  col += vec3(0.55, 0.60, 0.68) * pow(max(0.0, 1.0 - length((uv - vec2(0.5, 1.05)) * vec2(1.0, 1.6))), 2.2) * 0.22;
+  col *= 1.0 - 0.55*length(uv - vec2(0.5, 0.5));
   col += (hash(gl_FragCoord.xy + t) - 0.5) / 255.0;
   gl_FragColor = vec4(col, 1.0);
 }`;

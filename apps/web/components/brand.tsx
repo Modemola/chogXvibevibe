@@ -4,14 +4,14 @@ export function BrandMark({ size = 26 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="brand-mark">
       <defs>
         <linearGradient id="bm-a" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffe2b0" />
-          <stop offset="0.5" stopColor="#c9b8ff" />
-          <stop offset="1" stopColor="#63e6ff" />
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.5" stopColor="#8e959f" />
+          <stop offset="1" stopColor="#e6e9ed" />
         </linearGradient>
         <radialGradient id="bm-b">
           <stop offset="0" stopColor="#fff" />
-          <stop offset="0.4" stopColor="#f3c97a" />
-          <stop offset="1" stopColor="#f3c97a" stopOpacity="0" />
+          <stop offset="0.4" stopColor="#d6dbe1" />
+          <stop offset="1" stopColor="#d6dbe1" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="16" cy="16" r="13" fill="none" stroke="url(#bm-a)" strokeOpacity=".35" />

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2b0"/><stop offset=".5" stop-color="#c9b8ff"/><stop offset="1" stop-color="#63e6ff"/></linearGradient>
-    <radialGradient id="b"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#f3c97a"/><stop offset="1" stop-color="#f3c97a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#8e959f"/><stop offset="1" stop-color="#e6e9ed"/></linearGradient>
+    <radialGradient id="b"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#d6dbe1"/><stop offset="1" stop-color="#d6dbe1" stop-opacity="0"/></radialGradient>
   </defs>
   <rect width="32" height="32" rx="8" fill="#06070e"/>
   <ellipse cx="16" cy="16" rx="12" ry="4.8" fill="none" stroke="url(#a)" stroke-width="1.5" transform="rotate(-28 16 16)"/>

@@ -23,7 +23,7 @@ function Burst() {
             initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
             animate={{ x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0, opacity: 0 }}
             transition={{ duration: 1.1 + (i % 4) * 0.12, ease: EASE }}
-            style={{ background: i % 3 === 0 ? '#9b8cff' : i % 3 === 1 ? '#f3c97a' : '#63e6ff' }}
+            style={{ background: i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#aeb5bd' : '#8fe3c0', color: '#e6e9ed' }}
           />
         );
       })}

@@ -18,11 +18,11 @@ export interface LaunchRow {
 }
 
 const LANE_HUE: Record<string, string> = {
-  meme: '#ff8fb8',
-  art: '#ffc76b',
-  utility: '#63e6ff',
-  rwa: '#72f0b8',
-  vibecoded: '#9b8cff',
+  meme: '#e9b8c4',
+  art: '#e3d7bf',
+  utility: '#c9d8e6',
+  rwa: '#bfe3d3',
+  vibecoded: '#d6d0ea',
 };
 
 const FILTERS = [
@@ -75,7 +75,7 @@ export function LaunchGrid({ launches }: { launches: LaunchRow[] }) {
               transition={{ duration: 0.6, ease: EASE, delay: Math.min(i, 12) * 0.03 }}
             >
               <Tilt className="h100" max={7}>
-                <article className="glass pad r-xl launch-card" style={{ ['--lane' as string]: LANE_HUE[l.lane] ?? '#9b8cff' }}>
+                <article className="glass pad r-xl launch-card" style={{ ['--lane' as string]: LANE_HUE[l.lane] ?? '#d6dbe1' }}>
                   <div className="launch-orb" aria-hidden />
                   <div className="row between">
                     <span className="mono" style={{ fontSize: 15 }}>

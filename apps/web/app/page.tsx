@@ -1,4 +1,5 @@
-import { Featured, FinalCta, Formula, Hero, Pillars, Proof, Story, Ticker } from '@/components/home';
+import { Featured, FinalCta, Formula, Hero, Pillars, Proof, StatsBand } from '@/components/home';
+import { Sieve } from '@/components/sieve';
 import { getService } from '@/lib/server';
 
 export const dynamic = 'force-dynamic';
@@ -9,10 +10,10 @@ export default async function Home() {
   const featured = featuredId ? await svc.aftermath(featuredId) : undefined;
   return (
     <>
-      <Hero stats={stats} />
-      <Ticker items={highlights} />
+      <Hero highlights={highlights} />
+      <StatsBand stats={stats} />
       <Pillars />
-      <Story />
+      <Sieve />
       <Formula />
       <Proof />
       {featured && (

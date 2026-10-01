@@ -18,14 +18,14 @@ export function ScoreRing({ score, size = 220, label }: { score: number; size?: 
           <linearGradient id={`rg-${id}`} x1="0" y1="0" x2="1" y2="1">
             {negative ? (
               <>
-                <stop offset="0" stopColor="#ffb08a" />
-                <stop offset="1" stopColor="#ff6f8a" />
+                <stop offset="0" stopColor="#f6b2bf" />
+                <stop offset="1" stopColor="#d9667c" />
               </>
             ) : (
               <>
-                <stop offset="0" stopColor="#ffe2b0" />
-                <stop offset="0.5" stopColor="#c9b8ff" />
-                <stop offset="1" stopColor="#63e6ff" />
+                <stop offset="0" stopColor="#ffffff" />
+                <stop offset="0.5" stopColor="#8e959f" />
+                <stop offset="1" stopColor="#eef1f4" />
               </>
             )}
           </linearGradient>
@@ -98,8 +98,8 @@ export function Radar({ values, size = 260 }: { values: { label: string; value: 
     <svg width="100%" viewBox={`0 0 ${size} ${size + 12}`} className="radar">
       <defs>
         <radialGradient id="radar-g">
-          <stop offset="0" stopColor="#63e6ff" stopOpacity=".15" />
-          <stop offset="1" stopColor="#9b8cff" stopOpacity=".5" />
+          <stop offset="0" stopColor="#eef1f4" stopOpacity=".06" />
+          <stop offset="1" stopColor="#d6dbe1" stopOpacity=".32" />
         </radialGradient>
       </defs>
       {[0.25, 0.5, 0.75, 1].map((k) => (
@@ -112,7 +112,7 @@ export function Radar({ values, size = 260 }: { values: { label: string; value: 
       <motion.polygon
         points={poly(good)}
         fill="url(#radar-g)"
-        stroke="#c9b8ff"
+        stroke="#e6e9ed"
         strokeWidth="1.5"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -121,8 +121,8 @@ export function Radar({ values, size = 260 }: { values: { label: string; value: 
       />
       <motion.polygon
         points={poly(risk)}
-        fill="rgba(255,111,138,.18)"
-        stroke="#ff6f8a"
+        fill="rgba(240,138,156,.14)"
+        stroke="#f08a9c"
         strokeWidth="1.2"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -132,7 +132,7 @@ export function Radar({ values, size = 260 }: { values: { label: string; value: 
       {values.map((v, i) => {
         const [x, y] = pt(i, 1.2);
         return (
-          <text key={v.label} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="radar-label" fill={v.risk ? '#ff9db0' : '#d9d2ff'}>
+          <text key={v.label} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="radar-label" fill={v.risk ? '#f08a9c' : '#c8cdd4'}>
             {v.label} {v.value.toFixed(2)}
           </text>
         );
@@ -166,7 +166,7 @@ export function SoldSpark({ sold }: { sold: Partial<Record<'h1' | 'h24' | 'd7' |
   const y = (v: number) => 30 - (1 - v / 10_000) * 24;
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${y(p.v)}`).join(' ');
   const last = pts[pts.length - 1]!;
-  const color = last.v >= 9_000 ? '#ff6f8a' : last.v < 1_000 ? '#72f0b8' : '#ffc76b';
+  const color = last.v >= 9_000 ? '#f08a9c' : last.v < 1_000 ? '#8fe3c0' : '#aeb5bd';
   return (
     <svg width="120" height="34" viewBox="0 0 120 34" aria-label={`held ${Math.round(100 - last.v / 100)}%`}>
       <path d={`${line} L${last.x} 32 L6 32 Z`} fill={color} opacity=".12" />
@@ -191,13 +191,13 @@ export function RetentionCurve({ points }: { points: { label: string; value: num
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="curve">
       <defs>
         <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#9b8cff" stopOpacity=".35" />
-          <stop offset="1" stopColor="#9b8cff" stopOpacity="0" />
+          <stop offset="0" stopColor="#d6dbe1" stopOpacity=".22" />
+          <stop offset="1" stopColor="#d6dbe1" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="curve-line" x1="0" x2="1">
-          <stop offset="0" stopColor="#ffe2b0" />
-          <stop offset=".5" stopColor="#c9b8ff" />
-          <stop offset="1" stopColor="#63e6ff" />
+          <stop offset="0" stopColor="#8e959f" />
+          <stop offset=".5" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#aeb5bd" />
         </linearGradient>
       </defs>
       {[0, 0.25, 0.5, 0.75, 1].map((v) => (
@@ -229,7 +229,7 @@ export function RetentionCurve({ points }: { points: { label: string; value: num
         stroke="url(#curve-line)"
         strokeWidth="3"
         strokeLinecap="round"
-        style={{ filter: 'drop-shadow(0 0 8px rgba(155,140,255,.7))' }}
+        style={{ filter: 'drop-shadow(0 0 8px rgba(214,222,232,.55))' }}
         initial={{ pathLength: 0 }}
         whileInView={{ pathLength: 1 }}
         viewport={{ once: true }}
@@ -237,7 +237,7 @@ export function RetentionCurve({ points }: { points: { label: string; value: num
       />
       {known.map((p, i) => (
         <motion.g key={p.label} initial={{ opacity: 0, scale: 0 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6, ease: EASE, delay: 0.4 + i * 0.35 }} style={{ transformOrigin: `${p.x}px ${y(p.value)}px` }}>
-          <circle cx={p.x} cy={y(p.value)} r="9" fill="rgba(155,140,255,.2)" />
+          <circle cx={p.x} cy={y(p.value)} r="9" fill="rgba(214,219,225,.14)" />
           <circle cx={p.x} cy={y(p.value)} r="4.5" fill="#fff" />
           <text x={p.x} y={y(p.value) - 18} textAnchor="middle" className="curve-val">
             {(p.value * 100).toFixed(1)}%
@@ -248,7 +248,7 @@ export function RetentionCurve({ points }: { points: { label: string; value: num
   );
 }
 
-export const BUCKET_COLORS = ['#f3c97a', '#9b8cff', '#63e6ff', '#72f0b8', '#ff8fb8', '#ffb08a', '#c9b8ff', '#8fe9ff', '#ffe2b0', '#b5f5d8'];
+export const BUCKET_COLORS = ['#f2f4f6', '#a9b0b9', '#6f7680', '#c9d8e6', '#bfe3d3', '#e3d7bf', '#d6d0ea', '#e9b8c4', '#8e959f', '#dfe3e8'];
 
 /** Allocation by bucket as a glowing donut with the allocated share in the middle. */
 export function BucketDonut({ segments, center, sub, size = 200 }: { segments: { id: string; value: number }[]; center: string; sub: string; size?: number }) {

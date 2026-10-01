@@ -99,13 +99,13 @@ Set `PLAYWRIGHT_CHROMIUM_PATH` if Playwright's own browser isn't installed.
 
 ### Design
 
-The web app is dark liquid glass, built to impress before it explains.
+The web app is "silver noir": cool near-black, platinum type and one liquid-chrome accent. It uses hairline structure instead of glow, and keeps colour for data only: mint for holding, rose for dumping.
 
-- **Atmosphere:** a full-screen WebGL aurora (domain-warped noise in violet, cyan and molten gold), film grain, and a cursor light.
-- **Hero:** a real-time 3D glass lens in React Three Fiber. Its custom shader traces refraction through the surface into an aurora plate, with per-channel dispersion, Fresnel reflections and thin-film iridescence. It renders the same on every GPU and needs no downloaded assets.
-- **Liquid-glass surfaces:** animated iridescent edges, pointer-tracked sheen, 3D tilt cards and magnetic buttons.
-- **Motion everywhere:** word-by-word headline reveals, scroll-driven storytelling, count-ups, self-drawing charts (score ring, radar, retention curve, allocation donut), page transitions, a live outcome ticker and a ⌘K command palette.
-- **Graceful fallbacks:** CSS glass orb without WebGL, reduced-motion support, phone layouts with a floating thumb bar. Fonts are self-hosted, so the app needs no external hosts.
+- **Hero:** a real-time liquid mercury orb (React Three Fiber). A custom shader reflects a procedural photo studio (softbox, strip lights, horizon, a travelling highlight) that turns with the pointer. Behind it sit a masked hairline grid and silver dust that parts around the cursor. Under the headline, a decode line reads real wallets from the database and resolves each into its Scout verdict.
+- **The Sieve:** a scroll-pinned canvas that tells the product in four moves. Wallet dots arrive, farms cluster in rose and fall away, survivors become the leaves of a Merkle tree that draws up to its root, then they drop into aftermath columns coloured by who held.
+- **Structure and type:** editorial serif display with chrome-italic accents, mono uppercase labels, hairline bento grids and stats bands, and chrome pill buttons with a travelling highlight.
+- **Motion throughout:** word reveals, count-ups, self-drawing charts, page transitions, a ⌘K palette and a floating nav.
+- **Graceful fallbacks:** a CSS chrome orb without WebGL or with reduced motion, phone layouts with a thumb bar, and self-hosted fonts.
 
 ### SPARK snapshot (real data)
 

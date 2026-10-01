@@ -31,7 +31,7 @@ const switchAccount = (page: Page, address: string) =>
 
 test('home shows live stats', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /people who stay/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /ones who stay/ })).toBeVisible();
   await expect(page.getByText('Opted-in profiles')).toBeVisible();
   await expect(page.locator('.stat .n').first()).not.toHaveText('0');
   await page.screenshot({ path: 'e2e/screens/home.png', fullPage: true });
@@ -53,7 +53,7 @@ test('opt in, link an alt with both signatures, see it on the profile', async ({
   await expect(page.getByText(/Switch your wallet to the primary account/).last()).toBeVisible();
   await switchAccount(page, primary.address.toLowerCase());
   await page.getByRole('button', { name: 'Sign with the primary' }).click();
-  await expect(page.getByText(/^Linked/)).toBeVisible();
+  await expect(page.locator('.notice.ok', { hasText: /^Linked/ })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/join.png', fullPage: true });
 
   await page.goto(`/profile/${primary.address}`);
