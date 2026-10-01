@@ -1,11 +1,44 @@
 'use client';
 
 import { buildMessage, normalizeAddress } from '@scout/core';
+import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { EASE, Magnetic } from '@/components/motion';
+import { short } from '@/lib/format';
 import { api, connect, currentAccount, sign } from '@/lib/wallet';
 
 type Nonce = { nonce: string; issuedAt: number };
+
+/** A little golden burst for moments worth celebrating. */
+function Burst() {
+  return (
+    <div className="burst" aria-hidden>
+      {Array.from({ length: 26 }, (_, i) => {
+        const a = (i / 26) * Math.PI * 2;
+        const d = 60 + (i % 3) * 26;
+        return (
+          <motion.span
+            key={i}
+            initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+            animate={{ x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0, opacity: 0 }}
+            transition={{ duration: 1.1 + (i % 4) * 0.12, ease: EASE }}
+            style={{ background: i % 3 === 0 ? '#9b8cff' : i % 3 === 1 ? '#f3c97a' : '#63e6ff' }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function Step({ n, done, active, children }: { n: number; done?: boolean; active?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`step ${done ? 'is-done' : ''} ${active ? 'is-active' : ''}`}>
+      <span className="step-n">{done ? '✓' : n}</span>
+      <span>{children}</span>
+    </div>
+  );
+}
 
 export default function JoinFlow() {
   const [account, setAccount] = useState<`0x${string}`>();
@@ -13,7 +46,6 @@ export default function JoinFlow() {
   const [error, setError] = useState<string>();
   const [joined, setJoined] = useState<string>();
 
-  // Link flow state: the alt signs first, then the user switches to the primary.
   const [primaryInput, setPrimaryInput] = useState('');
   const [pendingLink, setPendingLink] = useState<{ message: string; altSig: `0x${string}`; primary: string; alt: string }>();
   const [linked, setLinked] = useState<{ primary: string; alt: string }>();
@@ -35,6 +67,7 @@ export default function JoinFlow() {
   const onOptIn = () =>
     run(async () => {
       const wallet = account ?? (await connect());
+      setAccount(wallet);
       const env = await api<Nonce>('/api/auth/nonce', { method: 'POST' });
       const message = buildMessage({ kind: 'opt_in', wallet: normalizeAddress(wallet) }, env);
       const signature = await sign(message, wallet);
@@ -44,7 +77,8 @@ export default function JoinFlow() {
 
   const onAltSign = () =>
     run(async () => {
-      const alt = normalizeAddress(account ?? (await connect()));
+      const alt = normalizeAddress(await connect());
+      setAccount(alt);
       let primary;
       try {
         primary = normalizeAddress(primaryInput.trim());
@@ -72,78 +106,107 @@ export default function JoinFlow() {
     });
 
   return (
-    <div className="grid cols-2">
-      <div className="panel">
-        <h3>1 · Opt in</h3>
-        <p className="muted small">Your wallet signs a plain-text message saying you want to be scored for graduation airdrops.</p>
-        {account && (
-          <p className="small">
-            Connected: <span className="mono">{account}</span>
-          </p>
-        )}
-        <div className="row">
+    <div className="grid cols-2 join-grid">
+      <motion.section className="glass pad r-xl join-card" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}>
+        <div className="join-badge">I</div>
+        <h2 className="display" style={{ fontSize: 40 }}>
+          Opt in
+        </h2>
+        <p className="muted">Your wallet signs a plain-text message saying you want to be scored for graduation airdrops. No transaction.</p>
+        <div className="steps">
+          <Step n={1} done={Boolean(account)} active={!account}>
+            Connect a browser wallet {account && <span className="mono faint">· {short(account)}</span>}
+          </Step>
+          <Step n={2} done={Boolean(joined)} active={Boolean(account) && !joined}>
+            Sign the opt-in message
+          </Step>
+          <Step n={3} done={Boolean(joined)}>
+            See your score and why
+          </Step>
+        </div>
+        <div className="row" style={{ marginTop: 'auto', paddingTop: 22 }}>
           {!account && (
-            <button onClick={onConnect} disabled={busy}>
+            <button className="btn" onClick={onConnect} disabled={busy}>
               Connect wallet
             </button>
           )}
-          <button className="primary" onClick={onOptIn} disabled={busy}>
-            Sign and opt in
-          </button>
+          <Magnetic>
+            <button className="btn primary" onClick={onOptIn} disabled={busy}>
+              {busy && !pendingLink ? <span className="spinner" /> : null}
+              Sign and opt in
+            </button>
+          </Magnetic>
         </div>
-        {joined && (
-          <div className="notice ok">
-            You&apos;re in. <Link href={`/profile/${joined}`}>See your score and why</Link>.
-          </div>
-        )}
-      </div>
+        <AnimatePresence>
+          {joined && (
+            <motion.div className="notice ok success" initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6, ease: EASE }}>
+              <Burst />
+              You&apos;re in. <Link href={`/profile/${joined}`}>See your score and why</Link>.
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.section>
 
-      <div className="panel">
-        <h3>2 · Link an alt (optional)</h3>
-        <p className="muted small">
-          Linked wallets are scored as one person and share one cap, and they don&apos;t get a sybil penalty for being
-          connected. Both wallets must sign, so nobody can attach a wallet to yours.
+      <motion.section className="glass pad r-xl join-card" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.45 }}>
+        <div className="join-badge">II</div>
+        <h2 className="display" style={{ fontSize: 40 }}>
+          Link an alt <span className="faint" style={{ fontSize: 20 }}>optional</span>
+        </h2>
+        <p className="muted">
+          Linked wallets are scored as one person and share one cap, with no sybil penalty between them. Both wallets sign, so
+          nobody can attach a wallet to yours.
         </p>
-        {!pendingLink ? (
-          <>
-            <label className="field">
-              Primary wallet
-              <input value={primaryInput} onChange={(e) => setPrimaryInput(e.target.value)} placeholder="0x…" />
-            </label>
-            <div className="row" style={{ marginTop: 8 }}>
-              <button onClick={onAltSign} disabled={busy}>
-                Sign with the alt (connected wallet)
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="notice">
-              Alt signed. Now switch your wallet to the primary account <span className="mono">{pendingLink.primary}</span> and
-              sign the same message.
-            </div>
-            <div className="row">
-              <button className="primary" onClick={onPrimarySign} disabled={busy}>
-                Sign with the primary
-              </button>
-              <button onClick={() => setPendingLink(undefined)} disabled={busy}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-        {linked && (
-          <div className="notice ok">
-            Linked <span className="mono">{linked.alt}</span> to{' '}
-            <Link href={`/profile/${linked.primary}`} className="mono">
-              {linked.primary}
-            </Link>
-            .
-          </div>
-        )}
-      </div>
+        <AnimatePresence mode="wait">
+          {!pendingLink ? (
+            <motion.div key="a" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.4, ease: EASE }}>
+              <label className="field" style={{ marginTop: 8 }}>
+                <span>Primary wallet</span>
+                <input value={primaryInput} onChange={(e) => setPrimaryInput(e.target.value)} placeholder="0x…" aria-label="Primary wallet" />
+              </label>
+              <div className="row" style={{ marginTop: 16 }}>
+                <button className="btn" onClick={onAltSign} disabled={busy}>
+                  Sign with the alt (connected wallet)
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="b" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.4, ease: EASE }}>
+              <div className="notice">
+                Alt signed. Now switch your wallet to the primary account <span className="mono">{pendingLink.primary}</span> and sign the
+                same message.
+              </div>
+              <div className="row" style={{ marginTop: 14 }}>
+                <button className="btn primary" onClick={onPrimarySign} disabled={busy}>
+                  Sign with the primary
+                </button>
+                <button className="btn" onClick={() => setPendingLink(undefined)} disabled={busy}>
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {linked && (
+            <motion.div className="notice ok success" style={{ marginTop: 16 }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+              <Burst />
+              Linked <span className="mono">{short(linked.alt)}</span> to{' '}
+              <Link href={`/profile/${linked.primary}`} className="mono">
+                {short(linked.primary)}
+              </Link>
+              .
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.section>
 
-      {error && <div className="notice error" style={{ gridColumn: '1 / -1' }}>{error}</div>}
+      <AnimatePresence>
+        {error && (
+          <motion.div className="notice error" style={{ gridColumn: '1 / -1' }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

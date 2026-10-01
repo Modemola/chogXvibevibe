@@ -97,6 +97,16 @@ Browser tests: `pnpm e2e` builds the app and drives it in Chromium with an injec
 profiles, the builder's validation and CSV export, and the phone layout.
 Set `PLAYWRIGHT_CHROMIUM_PATH` if Playwright's own browser isn't installed.
 
+### Design
+
+The web app is dark liquid glass, built to impress before it explains.
+
+- **Atmosphere:** a full-screen WebGL aurora (domain-warped noise in violet, cyan and molten gold), film grain, and a cursor light.
+- **Hero:** a real-time 3D glass lens in React Three Fiber. Its custom shader traces refraction through the surface into an aurora plate, with per-channel dispersion, Fresnel reflections and thin-film iridescence. It renders the same on every GPU and needs no downloaded assets.
+- **Liquid-glass surfaces:** animated iridescent edges, pointer-tracked sheen, 3D tilt cards and magnetic buttons.
+- **Motion everywhere:** word-by-word headline reveals, scroll-driven storytelling, count-ups, self-drawing charts (score ring, radar, retention curve, allocation donut), page transitions, a live outcome ticker and a ⌘K command palette.
+- **Graceful fallbacks:** CSS glass orb without WebGL, reduced-motion support, phone layouts with a floating thumb bar. Fonts are self-hosted, so the app needs no external hosts.
+
 ### SPARK snapshot (real data)
 
 ```bash

@@ -1,3 +1,4 @@
+import { PageHead } from '@/components/page-head';
 import { getService } from '@/lib/server';
 import PolicyBuilder from './PolicyBuilder';
 
@@ -16,11 +17,11 @@ export default async function BuilderPage({ searchParams }: { searchParams: Prom
   }));
   return (
     <>
-      <h1>Policy builder</h1>
-      <p className="lead">
-        Decide who gets the graduation slice. Every change re-resolves against all opted-in profiles, so you see the real
-        list, the amounts and the reasons before anything is sent.
-      </p>
+      <PageHead
+        kicker="Policy builder"
+        title="Design the *drop.*"
+        lead="Decide who gets the graduation slice. Every change re-resolves against all opted-in profiles, so you see the real list, the amounts and the reasons before anything is sent."
+      />
       <PolicyBuilder launches={launches} initialLaunch={launch} />
     </>
   );

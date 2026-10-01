@@ -1,5 +1,12 @@
-import type { Metadata } from 'next';
+import '@fontsource-variable/inter-tight';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource/instrument-serif/400-italic.css';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import { Backdrop, CursorLight, SmoothScroll } from '@/components/ambient';
+import { BrandMark } from '@/components/brand';
+import { MobileNav, Nav } from '@/components/nav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,30 +14,36 @@ export const metadata: Metadata = {
   description: 'Explainable airdrop allocation for vibe/vibe graduations on Robinhood Chain.',
 };
 
+export const viewport: Viewport = { themeColor: '#04050a', colorScheme: 'dark' };
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <header className="top">
-          <div className="wrap">
-            <Link href="/" className="brand">
-              Graduation <span>Scout</span>
-            </Link>
-            <nav className="links">
-              <Link href="/builder">Policy builder</Link>
-              <Link href="/launches">Launches</Link>
-              <Link href="/join">Join</Link>
-            </nav>
-            <form className="lookup" action="/profile" method="get">
-              <input name="wallet" placeholder="Look up 0x… wallet" aria-label="Wallet address" />
-            </form>
-          </div>
-        </header>
+        <Backdrop />
+        <CursorLight />
+        <SmoothScroll />
+        <Nav />
         <main className="wrap">{children}</main>
-        <footer className="bottom">
+        <MobileNav />
+        <footer className="site">
           <div className="wrap">
-            Independent builder project for vibe/vibe; not affiliated with vibe/vibe or Spark Labs. Scores use public on-chain
-            activity of opted-in wallets.
+            <div>
+              <div className="row" style={{ marginBottom: 14 }}>
+                <BrandMark size={22} />
+                <span style={{ color: 'var(--ink)' }}>Graduation Scout</span>
+              </div>
+              <div style={{ maxWidth: 420 }}>
+                An independent builder project for vibe/vibe on Robinhood Chain. Not affiliated with vibe/vibe or Spark Labs. Scores use
+                public on-chain activity of opted-in wallets.
+              </div>
+              <div className="row" style={{ marginTop: 16, gap: 18 }}>
+                <Link href="/builder" className="link">Builder</Link>
+                <Link href="/launches" className="link">Launches</Link>
+                <Link href="/join" className="link">Join</Link>
+              </div>
+            </div>
+            <div className="mark" aria-hidden>Scout</div>
           </div>
         </footer>
       </body>

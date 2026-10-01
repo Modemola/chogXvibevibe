@@ -1,61 +1,45 @@
-import Link from 'next/link';
-import { date, short } from '@/lib/format';
+import { CountUp } from '@/components/motion';
+import { PageHead } from '@/components/page-head';
 import { getService } from '@/lib/server';
+import { LaunchGrid } from './LaunchGrid';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LaunchesPage() {
   const launches = await (await getService()).launches();
+  const graduated = launches.filter((l) => l.graduatedAt !== null).length;
+  const withDrops = launches.filter((l) => l.drops > 0).length;
   return (
     <>
-      <h1>Launches</h1>
-      <p className="lead">Launches Scout has indexed. Open one in the builder to preview its graduation airdrop.</p>
+      <PageHead
+        kicker="Launches"
+        title="Every launch, every *aftermath.*"
+        lead="Launches Scout has indexed. Open a report card to see who held their graduation airdrop and who dumped it, or preview a drop in the builder."
+        aside={
+          <div className="glass r-xl row" style={{ gap: 0 }}>
+            {(
+              [
+                ['Indexed', launches.length],
+                ['Graduated', graduated],
+                ['With Scout drop', withDrops],
+              ] as const
+            ).map(([l, n], i) => (
+              <div key={l} className="stat" style={{ padding: '18px 24px', boxShadow: i ? 'inset 1px 0 0 var(--hair)' : undefined }}>
+                <div className="n" style={{ fontSize: 34 }}>
+                  <CountUp value={n} />
+                </div>
+                <div className="l">{l}</div>
+              </div>
+            ))}
+          </div>
+        }
+      />
       {launches.length === 0 ? (
         <div className="notice">
-          No launches yet. Run <code>pnpm scout simulate</code> for a demo world, or start the app with{' '}
-          <code>SCOUT_SIMULATE=1</code>.
+          No launches yet. Run <code>pnpm scout simulate</code> for a demo world, or start the app with <code>SCOUT_SIMULATE=1</code>.
         </div>
       ) : (
-        <div className="panel scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Launch</th>
-                <th>Lane</th>
-                <th>Pair</th>
-                <th>Creator</th>
-                <th>Created</th>
-                <th>Graduated</th>
-                <th>Policy</th>
-                <th className="num">Scout drop</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {launches.map((l) => (
-                <tr key={l.id}>
-                  <td className="mono">{l.id}</td>
-                  <td>{l.lane}</td>
-                  <td>{l.pairClass}</td>
-                  <td>
-                    <Link href={`/profile/${l.creator}`} className="mono">
-                      {short(l.creator)}
-                    </Link>
-                  </td>
-                  <td>{date(l.createdAt)}</td>
-                  <td>{l.graduatedAt ? date(l.graduatedAt) : <span className="muted">–</span>}</td>
-                  <td>{l.lockedPolicy ? <span className="chip good mono">{l.lockedPolicy.slice(0, 10)}</span> : <span className="muted">–</span>}</td>
-                  <td className="num">
-                    {l.drops ? <Link href={`/launches/${encodeURIComponent(l.id)}`}>{l.drops} · Aftermath</Link> : <span className="muted">–</span>}
-                  </td>
-                  <td>
-                    <Link href={`/builder?launch=${encodeURIComponent(l.id)}`}>Preview</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <LaunchGrid launches={launches} />
       )}
     </>
   );

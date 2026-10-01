@@ -185,6 +185,34 @@ export class ScoutService {
     }));
   }
 
+  /** Recent measured drop outcomes (latest window per drop), for the live ticker. */
+  async highlights(limit = 24) {
+    const rows = await this.db.query<{ launch_id: string; wallet: string; window: string; sold_bps: number }>(
+      `SELECT DISTINCT ON (o.launch_id, o.wallet) o.launch_id, o.wallet, o."window", o.sold_bps
+         FROM drop_outcomes o JOIN scout_drops d ON d.launch_id = o.launch_id AND d.wallet = o.wallet
+        ORDER BY o.launch_id, o.wallet,
+                 CASE o."window" WHEN 'd30' THEN 4 WHEN 'd7' THEN 3 WHEN 'h24' THEN 2 ELSE 1 END DESC`,
+    );
+    // Interleave holders and dumpers so the ticker shows both sides.
+    const held = rows.filter((r) => Number(r.sold_bps) < 1_000);
+    const dumped = rows.filter((r) => Number(r.sold_bps) >= 9_000);
+    const out: { launchId: string; wallet: string; window: string; soldBps: number }[] = [];
+    for (let i = 0; out.length < limit && (i < held.length || i < dumped.length); i++) {
+      for (const r of [held[held.length - 1 - i], dumped[dumped.length - 1 - i]]) {
+        if (r && out.length < limit) out.push({ launchId: r.launch_id, wallet: r.wallet, window: r.window, soldBps: Number(r.sold_bps) });
+      }
+    }
+    return out;
+  }
+
+  /** The launch with the most measured drop recipients at 7 days, for the home page. */
+  async featuredLaunch(): Promise<string | undefined> {
+    const [row] = await this.db.query<{ launch_id: string }>(
+      `SELECT launch_id FROM drop_outcomes WHERE "window" = 'd7' GROUP BY launch_id ORDER BY count(*) DESC, launch_id LIMIT 1`,
+    );
+    return row?.launch_id;
+  }
+
   /** Public Aftermath card: who held and who dumped a launch's Scout drop. */
   async aftermath(launchId: string) {
     const [launch] = await this.db.query<{ id: string; lane: Lane; pair_class: PairClass; creator: string; graduated_at: string | null; token: string }>(
