@@ -123,8 +123,18 @@ function download(name: string, content: BlobPart, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function PolicyBuilder({ launches, initialLaunch }: { launches: LaunchOption[]; initialLaunch?: string }) {
-  const [draft, setDraft] = useState<Draft>(() => draftFrom('custom'));
+export default function PolicyBuilder({
+  launches,
+  initialLaunch,
+  initialTemplate,
+}: {
+  launches: LaunchOption[];
+  initialLaunch?: string;
+  initialTemplate?: string;
+}) {
+  const [draft, setDraft] = useState<Draft>(() =>
+    draftFrom(TEMPLATE_IDS.includes(initialTemplate as TemplateId) ? (initialTemplate as TemplateId) : 'custom'),
+  );
   const [mode, setMode] = useState<'stored' | 'adhoc'>(launches.length ? 'stored' : 'adhoc');
   const [launchId, setLaunchId] = useState(initialLaunch ?? launches.find((l) => l.graduated)?.id ?? launches[0]?.id ?? '');
   const [adhoc, setAdhoc] = useState({ lane: 'utility', pairClass: 'stock', creator: '' });

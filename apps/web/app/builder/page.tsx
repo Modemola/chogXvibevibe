@@ -5,8 +5,8 @@ import PolicyBuilder from './PolicyBuilder';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Policy builder · Graduation Scout' };
 
-export default async function BuilderPage({ searchParams }: { searchParams: Promise<{ launch?: string }> }) {
-  const { launch } = await searchParams;
+export default async function BuilderPage({ searchParams }: { searchParams: Promise<{ launch?: string; template?: string }> }) {
+  const { launch, template } = await searchParams;
   const launches = (await (await getService()).launches()).map((l) => ({
     id: l.id,
     lane: l.lane,
@@ -22,7 +22,7 @@ export default async function BuilderPage({ searchParams }: { searchParams: Prom
         title="Design the *drop.*"
         lead="Decide who gets the graduation slice. Every change re-resolves against all opted-in profiles, so you see the real list, the amounts and the reasons before anything is sent."
       />
-      <PolicyBuilder launches={launches} initialLaunch={launch} />
+      <PolicyBuilder launches={launches} initialLaunch={launch} initialTemplate={template} />
     </>
   );
 }

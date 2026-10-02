@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import { short } from '@/lib/format';
 import { Dust } from './dust';
 import { Scramble } from './scramble';
+import { TourButton } from './tour';
 import { CountUp, DrawPath, EASE, Item, Magnetic, Reveal, Stagger, Tilt, Words } from './motion';
 import { Hero3D } from './three/Hero3D';
 
@@ -67,13 +68,11 @@ export function Hero({ highlights }: { highlights: Highlight[] }) {
         </motion.div>
         <motion.div className="row hero-ctas" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: EASE, delay: 1.2 }}>
           <Magnetic>
-            <Link href="/builder" className="btn primary lg">
-              Build a policy <span className="arrow">→</span>
-            </Link>
+            <TourButton className="btn primary lg" />
           </Magnetic>
           <Magnetic>
-            <Link href="/join" className="btn lg">
-              Opt in your wallet
+            <Link href="/builder" className="btn lg">
+              Build a policy <span className="arrow">→</span>
             </Link>
           </Magnetic>
         </motion.div>

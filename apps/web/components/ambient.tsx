@@ -172,6 +172,8 @@ export function SmoothScroll() {
   useEffect(() => {
     if (prefersReducedMotion() || window.matchMedia('(hover: none)').matches) return;
     const lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 0.95 });
+    // Exposed so the guided tour can glide the page.
+    (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
     let raf = 0;
     const loop = (t: number) => {
       lenis.raf(t);
@@ -180,6 +182,7 @@ export function SmoothScroll() {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      delete (window as unknown as { __lenis?: Lenis }).__lenis;
       lenis.destroy();
     };
   }, []);

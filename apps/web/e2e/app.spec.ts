@@ -111,6 +111,23 @@ test('aftermath card shows who held and who dumped', async ({ page }) => {
   await page.screenshot({ path: 'e2e/screens/aftermath.png', fullPage: true });
 });
 
+test('guided tour walks the story with manual controls', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /tour/i }).first().click();
+  const tour = page.getByRole('dialog', { name: 'Guided tour' });
+  await expect(tour).toContainText('01/07');
+  await tour.getByRole('button', { name: 'Pause tour' }).click();
+  await tour.getByRole('button', { name: 'Next step' }).click();
+  await expect(tour).toContainText('02/07');
+  await tour.getByRole('button', { name: 'Next step' }).click();
+  await expect(page).toHaveURL(/\/builder\?.*template=hold_or_die/);
+  await expect(tour).toContainText('03/07');
+  await tour.getByRole('button', { name: 'Next step' }).click();
+  await expect(page).toHaveURL(/\/profile\/0x/);
+  await tour.getByRole('button', { name: 'End tour' }).click();
+  await expect(tour).toBeHidden();
+});
+
 test('works on a phone-sized screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/builder');

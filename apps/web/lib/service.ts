@@ -213,6 +213,19 @@ export class ScoutService {
     return row?.launch_id;
   }
 
+  /** What the guided tour shows: the featured launch, its steadiest holder and its fastest dumper. */
+  async tourTargets() {
+    const launchId = await this.featuredLaunch();
+    if (!launchId) return { launchId: null, holder: null, dumper: null };
+    const { recipients } = await this.aftermath(launchId);
+    const last = (r: (typeof recipients)[number]) => r.sold.d30 ?? r.sold.d7 ?? r.sold.h24 ?? r.sold.h1 ?? -1;
+    const measured = recipients.filter((r) => last(r) >= 0);
+    const byAmount = (a: (typeof recipients)[number], b: (typeof recipients)[number]) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0);
+    const holder = [...measured].sort((a, b) => last(a) - last(b) || byAmount(a, b))[0];
+    const dumper = [...measured].sort((a, b) => (b.sold.h1 ?? 0) - (a.sold.h1 ?? 0) || byAmount(a, b))[0];
+    return { launchId, holder: holder?.wallet ?? null, dumper: dumper?.wallet ?? null };
+  }
+
   /** Public Aftermath card: who held and who dumped a launch's Scout drop. */
   async aftermath(launchId: string) {
     const [launch] = await this.db.query<{ id: string; lane: Lane; pair_class: PairClass; creator: string; graduated_at: string | null; token: string }>(

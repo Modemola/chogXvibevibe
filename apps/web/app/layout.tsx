@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Backdrop, CursorLight, SmoothScroll } from '@/components/ambient';
 import { BrandMark } from '@/components/brand';
 import { MobileNav, Nav } from '@/components/nav';
+import { TourProvider } from '@/components/tour';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,9 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Backdrop />
         <CursorLight />
         <SmoothScroll />
-        <Nav />
-        <main className="wrap">{children}</main>
-        <MobileNav />
+        <TourProvider>
+          <Nav />
+          <main className="wrap">{children}</main>
+          <MobileNav />
+        </TourProvider>
         <footer className="site">
           <div className="wrap">
             <div>

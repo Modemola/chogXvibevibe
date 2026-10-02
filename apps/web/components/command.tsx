@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTour } from './tour';
 
 interface Action {
   id: string;
@@ -12,6 +13,7 @@ interface Action {
 }
 
 const STATIC: Action[] = [
+  { id: 'tour', label: 'Start the guided tour', hint: '2 minutes, hands-free', href: '#tour' },
   { id: 'home', label: 'Home', hint: 'Overview', href: '/' },
   { id: 'builder', label: 'Policy builder', hint: 'Design an airdrop', href: '/builder' },
   { id: 'launches', label: 'Launches', hint: 'Browse & aftermath', href: '/launches' },
@@ -23,6 +25,7 @@ const isAddress = (s: string) => /^0x[0-9a-fA-F]{40}$/.test(s.trim());
 /** ⌘K: jump to any wallet, launch or page. */
 export function CommandPalette() {
   const router = useRouter();
+  const tour = useTour();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
@@ -76,9 +79,10 @@ export function CommandPalette() {
     (a?: Action) => {
       if (!a) return;
       setOpen(false);
-      router.push(a.href);
+      if (a.href === '#tour') tour.start();
+      else router.push(a.href);
     },
-    [router],
+    [router, tour],
   );
 
   return (
