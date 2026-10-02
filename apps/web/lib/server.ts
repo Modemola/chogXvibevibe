@@ -10,13 +10,20 @@ import { ApiError, ScoutService, toJson } from './service';
  * PGlite at SCOUT_PGLITE_DIR (default: the repo's .data/pglite, shared with
  * the `scout` CLI). SCOUT_SIMULATE=1 seeds a simulated world into an empty
  * database, for local demos only.
+ *
+ * On Vercel without DATABASE_URL there is no writable disk to keep PGlite on,
+ * so each server instance runs an in-memory PGlite seeded with the simulated
+ * world. Good enough for a demo; set DATABASE_URL to keep opt-ins and links.
  */
 const g = globalThis as unknown as { scout?: Promise<{ db: Db; service: ScoutService }> };
 
 async function init() {
-  const db = await openDb({ pgliteDir: process.env.SCOUT_PGLITE_DIR ?? path.resolve(process.cwd(), '../../.data/pglite') });
+  const ephemeral = Boolean(process.env.VERCEL) && !process.env.DATABASE_URL && !process.env.SCOUT_PGLITE_DIR;
+  const db = await openDb({
+    pgliteDir: ephemeral ? undefined : (process.env.SCOUT_PGLITE_DIR ?? path.resolve(process.cwd(), '../../.data/pglite')),
+  });
   await migrate(db);
-  if (process.env.SCOUT_SIMULATE === '1') {
+  if (process.env.SCOUT_SIMULATE === '1' || ephemeral) {
     const [row] = await db.query<{ n: string }>('SELECT count(*)::text AS n FROM launches');
     if (row?.n === '0') {
       console.log('[scout] empty database, seeding simulated world (SCOUT_SIMULATE=1)');

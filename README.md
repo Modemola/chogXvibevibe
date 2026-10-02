@@ -269,3 +269,13 @@ A bare boolean field means `== true`.
 - [x] **Milestone 4: Aftermath**: transfer-based measurement job, per-launch Aftermath cards, API
 - [x] **Milestone 5a: ScoutDrop contract**, chain ingest, drop files, deploy script
 - [ ] Milestone 5b: real vibe/vibe testnet source (needs contract addresses + Robinhood Chain testnet RPC)
+
+## Deploying to Vercel
+
+1. Import the repo and set **Root Directory** to `apps/web` (Project → Settings → Build and Deployment). Leave
+   "Include files outside the root directory" on; `apps/web/vercel.json` builds the workspace packages first.
+2. Without `DATABASE_URL`, each server instance runs an in-memory database seeded with the simulated world. The demo
+   works, but opt-ins and links don't persist.
+3. For persistence, add a Postgres `DATABASE_URL` (Neon, Render, Supabase or any other Postgres; append
+   `?sslmode=require` if the host needs SSL), then seed it once from your machine:
+   `DATABASE_URL=… pnpm scout migrate && DATABASE_URL=… pnpm scout simulate`.
