@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
-/** Fades, lifts and un-blurs its children when they scroll into view. */
+/** Fades and lifts its children when they scroll into view. */
 export function Reveal({
   children,
   delay = 0,
@@ -23,8 +23,8 @@ export function Reveal({
   return (
     <Tag
       className={className}
-      initial={{ opacity: 0, y, filter: 'blur(10px)' }}
-      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '0px 0px -8% 0px' }}
       transition={{ duration: 1, ease: EASE, delay }}
     >
@@ -49,8 +49,8 @@ export function Stagger({ children, className, gap = 0.07 }: { children: ReactNo
 }
 
 export const item = {
-  hidden: { opacity: 0, y: 22, filter: 'blur(8px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.9, ease: EASE }, transitionEnd: { filter: 'none' } },
+  hidden: { opacity: 0, y: 22 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
 };
 
 export function Item({ children, className }: { children: ReactNode; className?: string }) {

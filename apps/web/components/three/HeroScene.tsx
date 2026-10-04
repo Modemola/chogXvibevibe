@@ -4,7 +4,6 @@ import { Sparkles } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /** Pointer + scroll, shared by everything in the scene. */
 const input = { x: 0, y: 0, scroll: 0 };
@@ -25,13 +24,35 @@ function useInputs() {
   }, []);
 }
 
+/**
+ * The liquid surface is displaced on the GPU: each vertex is pushed along its radius by
+ * smooth sum-of-sines noise, and the normal comes from two displaced neighbours, so the
+ * CPU does no per-frame geometry work at all.
+ */
 const VERT = /* glsl */ `
+uniform float uTime;
 varying vec3 vWorld;
 varying vec3 vNormal;
+float wobble(vec3 p) {
+  float t = uTime;
+  return sin(p.x * 1.7 + t * 0.7) * cos(p.y * 1.5 - t * 0.55) * 0.5
+       + sin(p.y * 2.1 + p.z * 1.3 + t * 0.9) * 0.3
+       + cos(p.z * 1.9 - p.x * 1.1 + t * 0.5) * 0.2;
+}
+vec3 displace(vec3 p) { return p * (1.0 + wobble(p) * 0.07); }
 void main() {
-  vec4 w = modelMatrix * vec4(position, 1.0);
+  float radius = length(position);
+  vec3 n = position / radius;
+  vec3 tangent = normalize(cross(n, abs(n.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+  vec3 bitangent = cross(n, tangent);
+  float e = 0.01;
+  vec3 p0 = displace(position);
+  vec3 p1 = displace(normalize(n + tangent * e) * radius);
+  vec3 p2 = displace(normalize(n + bitangent * e) * radius);
+  vec3 normalObj = normalize(cross(p1 - p0, p2 - p0));
+  vec4 w = modelMatrix * vec4(p0, 1.0);
   vWorld = w.xyz;
-  vNormal = normalize(mat3(modelMatrix) * normal);
+  vNormal = normalize(mat3(modelMatrix) * normalObj);
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
@@ -84,39 +105,13 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-/** Smooth sum-of-sines noise: enough for a slow liquid surface. */
-function wobble(x: number, y: number, z: number, t: number) {
-  return (
-    Math.sin(x * 1.7 + t * 0.7) * Math.cos(y * 1.5 - t * 0.55) * 0.5 +
-    Math.sin(y * 2.1 + z * 1.3 + t * 0.9) * 0.3 +
-    Math.cos(z * 1.9 - x * 1.1 + t * 0.5) * 0.2
-  );
-}
-
 function Mercury({ detail }: { detail: number }) {
   const mesh = useRef<THREE.Mesh>(null);
   const mat = useRef<THREE.ShaderMaterial>(null);
-  // Welded (indexed) geometry, so recomputed normals are smooth rather than per-face facets.
-  const geo = useMemo(() => {
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1.3, detail).deleteAttribute('normal').deleteAttribute('uv'));
-    g.computeVertexNormals();
-    return g;
-  }, [detail]);
-  const base = useMemo(() => Float32Array.from(geo.attributes.position!.array as Float32Array), [geo]);
+  const geo = useMemo(() => new THREE.IcosahedronGeometry(1.3, detail), [detail]);
   const uniforms = useMemo(() => ({ uTime: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 } }), []);
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const arr = pos.array as Float32Array;
-    for (let i = 0; i < arr.length; i += 3) {
-      const x = base[i]!, y = base[i + 1]!, z = base[i + 2]!;
-      const k = 1 + wobble(x, y, z, t) * 0.07;
-      arr[i] = x * k;
-      arr[i + 1] = y * k;
-      arr[i + 2] = z * k;
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
     if (mat.current) {
       mat.current.uniforms.uTime!.value = t;
       // The studio turns with the pointer, so the reflections glide across the metal.
@@ -198,7 +193,7 @@ export default function HeroScene() {
   return (
     <div ref={host} className="hero-canvas">
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={[1, 1.5]}
         camera={{ position: [0, 0, 7.6], fov: 32 }}
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
         frameloop={visible ? 'always' : 'never'}

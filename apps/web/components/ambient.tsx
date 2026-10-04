@@ -22,7 +22,7 @@ float noise(vec2 p){
 float fbm(vec2 p){
   float v = 0.0, a = 0.5;
   mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-  for (int i = 0; i < 5; i++){ v += a*noise(p); p = m*p; a *= 0.5; }
+  for (int i = 0; i < 4; i++){ v += a*noise(p); p = m*p; a *= 0.5; }
   return v;
 }
 void main(){
@@ -47,7 +47,7 @@ void main(){
 
 const VERT = 'attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }';
 
-/** Full-screen living aurora. Renders at half resolution; it's soft by nature. */
+/** Full-screen living mist. Soft by nature, so it renders at a third of the resolution and 30 fps. */
 export function Backdrop() {
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
@@ -79,7 +79,7 @@ export function Backdrop() {
     const uMouse = gl.getUniformLocation(prog, 'mouse');
     const uScroll = gl.getUniformLocation(prog, 'scroll');
 
-    const scale = 0.5;
+    const scale = 0.34;
     const resize = () => {
       canvas.width = Math.max(1, Math.floor(window.innerWidth * scale));
       canvas.height = Math.max(1, Math.floor(window.innerHeight * scale));
@@ -99,7 +99,14 @@ export function Backdrop() {
     const still = prefersReducedMotion();
     let raf = 0;
     const start = performance.now() - 40_000;
+    let odd = false;
     const frame = (now: number) => {
+      // The mist drifts slowly; every other frame is plenty and halves the GPU and compositing cost.
+      odd = !odd;
+      if (odd && !still) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
       mouse.x += (mouse.tx - mouse.x) * 0.04;
       mouse.y += (mouse.ty - mouse.y) * 0.04;
       gl.uniform1f(uT, (now - start) / 1000);
@@ -141,21 +148,33 @@ export function CursorLight() {
     const el = ref.current!;
     const pos = { x: window.innerWidth / 2, y: window.innerHeight / 3, tx: window.innerWidth / 2, ty: window.innerHeight / 3 };
     let raf = 0;
+    // Runs only while the light is catching up with the pointer, not on every idle frame.
     const tick = () => {
       pos.x += (pos.tx - pos.x) * 0.12;
       pos.y += (pos.ty - pos.y) * 0.12;
       el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-      raf = requestAnimationFrame(tick);
+      raf = Math.abs(pos.tx - pos.x) + Math.abs(pos.ty - pos.y) > 0.5 ? requestAnimationFrame(tick) : 0;
+    };
+    let hovered: HTMLElement | null = null;
+    let pending: PointerEvent | null = null;
+    const sheen = () => {
+      const e = pending;
+      pending = null;
+      if (hovered && e) {
+        const r = hovered.getBoundingClientRect();
+        hovered.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        hovered.style.setProperty('--my', `${e.clientY - r.top}px`);
+      }
     };
     const onMove = (e: PointerEvent) => {
       pos.tx = e.clientX;
       pos.ty = e.clientY;
-      const target = (e.target as Element | null)?.closest?.('.glass, .btn') as HTMLElement | null;
-      if (target) {
-        const r = target.getBoundingClientRect();
-        target.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        target.style.setProperty('--my', `${e.clientY - r.top}px`);
-      }
+      if (!raf) raf = requestAnimationFrame(tick);
+      // At most one sheen update per frame, and only for the panel under the pointer.
+      hovered = (e.target as Element | null)?.closest?.('.glass, .btn') as HTMLElement | null;
+      if (!hovered) return;
+      if (!pending) requestAnimationFrame(sheen);
+      pending = e;
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     raf = requestAnimationFrame(tick);
@@ -171,7 +190,7 @@ export function CursorLight() {
 export function SmoothScroll() {
   useEffect(() => {
     if (prefersReducedMotion() || window.matchMedia('(hover: none)').matches) return;
-    const lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 0.95 });
+    const lenis = new Lenis({ lerp: 0.13, wheelMultiplier: 1 });
     // Exposed so the guided tour can glide the page.
     (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
     let raf = 0;

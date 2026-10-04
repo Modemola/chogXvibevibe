@@ -50,9 +50,17 @@ export function createPgDb(connectionString: string): Db {
 
 type PgliteLike = Pick<PGlite, 'query' | 'exec'>;
 
-export async function createPgliteDb(dataDir?: string): Promise<Db> {
+/**
+ * PGlite on disk (`dataDir`) or in memory. `snapshot` restores an in-memory
+ * database from a `pgliteSnapshot` dump, which boots several times faster than
+ * creating and migrating a fresh one.
+ */
+export async function createPgliteDb(dataDir?: string, opts: { snapshot?: Blob } = {}): Promise<Db> {
   if (dataDir) mkdirSync(dataDir, { recursive: true });
-  const db = await PGlite.create(dataDir);
+  return wrapPglite(opts.snapshot ? await PGlite.create({ loadDataDir: opts.snapshot }) : await PGlite.create(dataDir));
+}
+
+function wrapPglite(db: PGlite): Db {
   const wrap = (conn: PgliteLike, inTx: boolean): Db => ({
     query: async (sql, params) => (await conn.query(sql, params)).rows as never,
     exec: async (sql) => {
@@ -64,6 +72,16 @@ export async function createPgliteDb(dataDir?: string): Promise<Db> {
     },
   });
   return wrap(db, false);
+}
+
+/** Builds an in-memory database with `fill` and returns it as a gzipped data-dir dump. */
+export async function pgliteSnapshot(fill: (db: Db) => Promise<void>): Promise<Blob> {
+  const pglite = await PGlite.create();
+  const db = wrapPglite(pglite);
+  await fill(db);
+  const blob = await pglite.dumpDataDir('gzip');
+  await pglite.close();
+  return blob;
 }
 
 /** DATABASE_URL → Postgres; otherwise PGlite at `pgliteDir` (or in memory). */

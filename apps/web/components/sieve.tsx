@@ -199,11 +199,12 @@ export function Sieve() {
     let visible = false;
     const io = new IntersectionObserver(([e]) => {
       visible = Boolean(e?.isIntersecting);
-      if (visible) raf = requestAnimationFrame(draw);
+      if (visible && !raf) raf = requestAnimationFrame(draw);
     });
     io.observe(el);
 
     function draw(now: number) {
+      raf = 0;
       shown += (scrollYProgress.get() - shown) * 0.12;
       const p = shown;
       ctx.clearRect(0, 0, w, h);

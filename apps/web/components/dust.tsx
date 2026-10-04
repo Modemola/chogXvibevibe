@@ -44,13 +44,14 @@ export function Dust({ count = 90, className }: { count?: number; className?: st
     let visible = true;
     const io = new IntersectionObserver(([e]) => {
       visible = Boolean(e?.isIntersecting);
-      if (visible) raf = requestAnimationFrame(tick);
+      if (visible && !raf) raf = requestAnimationFrame(tick);
     });
     io.observe(canvas);
 
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
+      raf = 0;
       const dt = Math.min(50, now - last) / 16.7;
       last = now;
       ctx.clearRect(0, 0, w, h);
