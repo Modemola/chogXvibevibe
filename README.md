@@ -1,5 +1,7 @@
 # Graduation Scout
 
+**Live demo:** https://vibevibe-gules.vercel.app (guided tour: https://vibevibe-gules.vercel.app/?tour=1)
+
 Explainable airdrop allocation for [vibe/vibe](https://vibevibe.fun) graduations on Robinhood Chain.
 
 When a vibe/vibe token graduates, its creator can airdrop a slice of supply to "the right people".
