@@ -12,20 +12,39 @@ import { ApiError, ScoutService, toJson } from './service';
  * the `scout` CLI). SCOUT_SIMULATE=1 seeds a simulated world into an empty
  * database, for local demos only.
  *
- * On Vercel without DATABASE_URL there is no writable disk to keep PGlite on,
+ * On Vercel without a database URL (see databaseUrl) there is no writable disk to keep PGlite on,
  * so each server instance runs an in-memory PGlite seeded with the simulated
  * world. Good enough for a demo; set DATABASE_URL to keep opt-ins and links.
  * The build stores that world as a snapshot (scripts/snapshot.mjs), so a cold
  * instance restores it in about a second instead of seeding it from scratch.
  */
-const g = globalThis as unknown as { scout?: Promise<{ db: Db; service: ScoutService }> };
+export type DbMode = 'postgres' | 'pglite' | 'demo-memory';
+const g = globalThis as unknown as { scout?: Promise<{ db: Db; service: ScoutService; mode: DbMode }> };
+
+/**
+ * The Postgres connection string. DATABASE_URL first; then the names hosting
+ * integrations set (Vercel's Neon and Postgres integrations use POSTGRES_URL,
+ * or DATABASE_URL/POSTGRES_URL behind a custom prefix such as STORAGE_).
+ */
+export function databaseUrl(env: Record<string, string | undefined> = process.env): string | undefined {
+  if (env.DATABASE_URL) return env.DATABASE_URL;
+  if (env.POSTGRES_URL) return env.POSTGRES_URL;
+  const key = Object.keys(env)
+    .filter((k) => /_(DATABASE_URL|POSTGRES_URL)$/.test(k) && env[k])
+    .sort()[0];
+  return key ? env[key] : undefined;
+}
 
 async function init() {
-  const ephemeral = Boolean(process.env.VERCEL) && !process.env.DATABASE_URL && !process.env.SCOUT_PGLITE_DIR;
+  const url = databaseUrl();
+  const ephemeral = Boolean(process.env.VERCEL) && !url && !process.env.SCOUT_PGLITE_DIR;
+  if (ephemeral) console.warn('[scout] no database URL set: using an in-memory demo database; opt-ins will not persist');
   const snapshot = ephemeral ? await loadSnapshot() : undefined;
+  const mode: DbMode = url ? 'postgres' : ephemeral ? 'demo-memory' : 'pglite';
   const db = snapshot
     ? await createPgliteDb(undefined, { snapshot })
     : await openDb({
+        url,
         pgliteDir: ephemeral ? undefined : (process.env.SCOUT_PGLITE_DIR ?? path.resolve(process.cwd(), '../../.data/pglite')),
       });
   await migrate(db);
@@ -39,7 +58,7 @@ async function init() {
     }
   }
   const fanout = process.env.SCOUT_IGNORE_HUBS_MIN_FANOUT;
-  return { db, service: new ScoutService(db, { ignoreHubsMinFanout: fanout === undefined ? 20 : Number(fanout) }) };
+  return { db, mode, service: new ScoutService(db, { ignoreHubsMinFanout: fanout === undefined ? 20 : Number(fanout) }) };
 }
 
 const SNAPSHOT = path.join(process.cwd(), '.snapshot/demo.tar.gz');
@@ -51,6 +70,12 @@ async function loadSnapshot(): Promise<Blob | undefined> {
     console.warn('[scout] no demo snapshot found, seeding from scratch');
     return undefined;
   }
+}
+
+/** Which kind of database this server instance is using (never the connection string). */
+export async function databaseMode(): Promise<DbMode> {
+  await getService();
+  return (await g.scout!).mode;
 }
 
 export async function getService(): Promise<ScoutService> {

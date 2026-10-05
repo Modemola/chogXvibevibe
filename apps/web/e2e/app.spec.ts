@@ -42,6 +42,9 @@ test('opt in, link an alt with both signatures, see it on the profile', async ({
   await page.goto('/join');
   await page.getByRole('button', { name: 'Sign and opt in' }).click();
   await expect(page.getByText("You're in.")).toBeVisible();
+  // A refresh remembers the connected wallet and that it has joined.
+  await page.reload();
+  await expect(page.getByText("You're in.")).toBeVisible();
 
   await switchAccount(page, alt.address.toLowerCase());
   await page.getByLabel('Primary wallet').fill(primary.address);

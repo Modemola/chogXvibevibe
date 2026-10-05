@@ -267,7 +267,14 @@ export class ScoutService {
       asOf,
     };
 
-    const pop = await this.population(asOf);
+    // The profile row is read fresh: the cached population can be up to a minute old, and on a host with
+    // several server instances an opt-in made through another instance would otherwise not show up yet.
+    const [profileRow] = await this.db.query<{ opted_in_at: string }>('SELECT opted_in_at FROM profiles WHERE wallet = $1', [wallet]);
+    let pop = await this.population(asOf);
+    if (profileRow && Number(profileRow.opted_in_at) <= asOf && !pop.facts.has(wallet)) {
+      this.invalidate();
+      pop = await this.population(asOf);
+    }
     const optedIn = pop.facts.has(wallet);
     const [facts] = optedIn
       ? [pop.facts.get(wallet)!]
@@ -297,7 +304,6 @@ export class ScoutService {
       };
     });
 
-    const [profileRow] = await this.db.query<{ opted_in_at: string }>('SELECT opted_in_at FROM profiles WHERE wallet = $1', [wallet]);
     const alts = await this.db.query<{ wallet: string }>('SELECT wallet FROM wallet_links WHERE primary_wallet = $1 ORDER BY wallet', [wallet]);
 
     return {

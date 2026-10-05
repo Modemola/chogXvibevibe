@@ -1,7 +1,7 @@
 import { TEMPLATES, buildMessage, normalizeAddress } from '@scout/core';
 import { type Db, createPgliteDb, migrate, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
-import { privateKeyToAccount } from 'viem/accounts';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiError, ScoutService } from '../lib/service.js';
 
@@ -71,6 +71,18 @@ describe('ScoutService', () => {
     const old = buildMessage({ kind: 'opt_in', wallet: A }, stale);
     clock += 3_600;
     await expectApiError(svc.optIn({ message: old, signature: await alice.signMessage({ message: old }) }), 400, /expired/);
+  });
+
+  it('shows a fresh opt-in on another server instance with a warm cache', async () => {
+    const carol = privateKeyToAccount(generatePrivateKey());
+    const C = normalizeAddress(carol.address);
+    // A second instance on the same database, whose population cache is warmed before the opt-in.
+    const other = new ScoutService(db, { now: () => clock, cacheSec: 600 });
+    expect((await other.profile(C)).optedIn).toBe(false);
+    const env = await svc.issueNonce();
+    const message = buildMessage({ kind: 'opt_in', wallet: C }, env);
+    await svc.optIn({ message, signature: await carol.signMessage({ message }) });
+    expect((await other.profile(C)).optedIn).toBe(true);
   });
 
   it('links wallets only when both sign', async () => {

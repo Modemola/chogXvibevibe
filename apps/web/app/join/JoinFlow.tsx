@@ -3,10 +3,10 @@
 import { buildMessage, normalizeAddress } from '@scout/core';
 import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EASE, Magnetic } from '@/components/motion';
 import { short } from '@/lib/format';
-import { api, connect, currentAccount, sign } from '@/lib/wallet';
+import { api, connect, currentAccount, hasWallet, sign } from '@/lib/wallet';
 
 type Nonce = { nonce: string; issuedAt: number };
 
@@ -49,6 +49,22 @@ export default function JoinFlow() {
   const [primaryInput, setPrimaryInput] = useState('');
   const [pendingLink, setPendingLink] = useState<{ message: string; altSig: `0x${string}`; primary: string; alt: string }>();
   const [linked, setLinked] = useState<{ primary: string; alt: string }>();
+
+  // After a refresh, pick the connected wallet back up (no prompt) and show whether it has already joined.
+  useEffect(() => {
+    if (!hasWallet()) return;
+    let cancelled = false;
+    (async () => {
+      const wallet = await currentAccount();
+      if (!wallet || cancelled) return;
+      setAccount((a) => a ?? wallet);
+      const profile = await api<{ optedIn: boolean }>(`/api/profiles/${wallet}`);
+      if (profile.optedIn && !cancelled) setJoined((j) => j ?? wallet);
+    })().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
