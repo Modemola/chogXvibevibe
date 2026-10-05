@@ -602,3 +602,11 @@ footer.site .mark { font: italic 400 clamp(64px, 14vw, 210px)/0.8 var(--serif); 
 .tour-progress i { display: block; height: 100%; background: var(--silver); transform-origin: left; box-shadow: 0 0 8px rgba(214, 219, 225, .6); }
 .tour-play { font-size: 9px; }
 @media (max-width: 760px) { .tour { bottom: 78px; } .tour-title { font-size: 22px !important; } }
+
+/* --- On-chain proof ---------------------------------------------------------- */
+.onchain-facts { display: grid; grid-template-columns: auto 1fr; gap: 10px 22px; margin: 0; font-size: 14px; }
+.onchain-facts dt { color: var(--steel); }
+.onchain-facts dd { margin: 0; text-align: right; }
+.onchain-txs { gap: 0 !important; }
+.onchain-txs .row { padding: 9px 0; border-top: 1px solid var(--hair); gap: 14px; }
+.onchain-badge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 22px; }

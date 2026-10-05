@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { RetentionCurve, SoldSpark } from '@/components/charts';
 import { CountUp, Item, Reveal, Stagger, Tilt } from '@/components/motion';
+import { OnchainBadge } from '@/components/onchain';
 import { PageHead } from '@/components/page-head';
 import { date, pct, short, tokens } from '@/lib/format';
+import { onchainDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
 import { ApiError } from '@/lib/service';
 import { StackBar } from './StackBar';
@@ -43,10 +45,14 @@ export default async function AftermathPage({ params }: { params: Promise<{ id: 
             {launch.graduatedAt ? `, graduated ${date(launch.graduatedAt)}` : ', not graduated'}.{' '}
             {a.recipients.length
               ? `${a.recipients.length} wallets received ${tokens(a.totalAmount, 0)} tokens through Scout. Here is what they did with them.`
-              : 'No Scout drop recorded for this launch.'}
+              : onchainDrop?.launchId === launch.id
+                ? 'Its Scout drop was paid out on-chain; the aftermath fills in once the drop is indexed.'
+                : 'No Scout drop recorded for this launch.'}
           </>
         }
       />
+
+      {onchainDrop?.launchId === launch.id && <OnchainBadge drop={onchainDrop} />}
 
       {a.recipients.length > 0 && (
         <>

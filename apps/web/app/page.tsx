@@ -1,5 +1,7 @@
 import { Featured, FinalCta, Formula, Hero, Pillars, Proof, StatsBand } from '@/components/home';
+import { OnchainProof } from '@/components/onchain';
 import { Sieve } from '@/components/sieve';
+import { onchainDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +18,7 @@ export default async function Home() {
       <Sieve />
       <Formula />
       <Proof />
+      {onchainDrop && <OnchainProof drop={onchainDrop} />}
       {featured && (
         <Featured
           data={{

@@ -29,9 +29,12 @@ import {
   writeBatch,
 } from '@scout/db';
 import { BURN_SINK, createDropArgs, claimBatches } from '@scout/contracts';
+import { http, createPublicClient, createWalletClient } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { SPARK_BASE, createBaseClient, createRpcClient, simulateWorld, snapshotErc20 } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
 import { ingestScoutDrops } from './onchain.js';
+import { robinhoodTestnet, runShowcaseDrop } from './testnet.js';
 
 const USAGE = `scout <command> [options]
 
@@ -53,6 +56,12 @@ Commands
                                         --drop-out writes ScoutDrop createDrop args + claim batches with proofs
   ingest-drops --rpc URL --contract 0x.. --from-block N [--to-block N|latest] [--chunk 2000]
                                         Read ScoutDrop events and launch-token transfers, then run aftermath
+  showcase-drop --rpc URL [--launch ID] [--template hold_or_die] [--slice N] [--out file.json]
+              [--scoutdrop 0x..] [--token 0x..]
+                                        Run a resolved drop for real: deploy ScoutDrop and a demo token (or reuse
+                                        them), fund the drop, push every claim. Needs DEPLOYER_PRIVATE_KEY in the
+                                        environment. Defaults to the most recently graduated launch
+                                        that has no Scout drop yet.
   evaluate  [--template T] [--ignore-hubs 20] [--as-of T]
                                         Score simulated profiles against ground truth
 
@@ -84,6 +93,7 @@ const { positionals, values } = parseArgs({
     'ignore-hubs': { type: 'string' },
     'drop-out': { type: 'string' },
     contract: { type: 'string' },
+    scoutdrop: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -120,6 +130,39 @@ function templateArg(): TemplateId {
   const t = (values.template ?? 'custom') as TemplateId;
   if (!TEMPLATE_IDS.includes(t)) throw new Error(`Unknown template '${t}'. One of: ${TEMPLATE_IDS.join(', ')}`);
   return t;
+}
+
+/** Resolves a template over every opted-in profile for --launch (or an ad-hoc launch from --lane/--pair/--creator). */
+async function resolveFromArgs(db: Db, launchId: string | undefined) {
+  const asOf = values['as-of'] ? Number(values['as-of']) : await latestActivity(db);
+  let launch: LaunchContext | undefined;
+  if (launchId) {
+    launch = await loadLaunchContext(db, launchId, asOf);
+    if (!launch) throw new Error(`Launch ${launchId} not found`);
+  } else {
+    launch = {
+      launchId: 'adhoc',
+      lane: (values.lane ?? 'utility') as Lane,
+      pairClass: (values.pair ?? 'stock') as PairClass,
+      creator: normalizeAddress(values.creator ?? '0x000000000000000000000000000000000000dead'),
+      asOf,
+    };
+  }
+  const config = await configWithHubs(db, values['ignore-hubs']);
+  const wallets = await listProfileWallets(db, asOf);
+  const snapshot = await sparkSnapshotFor(db, asOf);
+  const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: snapshot });
+  const [creatorFacts] = await loadWalletFacts(db, { wallets: [launch.creator], asOf, sparkSnapshotId: snapshot });
+  const template = templateArg();
+  const set = resolveAllocation({
+    policy: TEMPLATES[template].policy,
+    launch,
+    slice: BigInt(values.slice ?? '1000000') * E18,
+    wallets: facts,
+    creatorFacts,
+    config,
+  });
+  return { set, launch, facts, template };
 }
 
 async function main() {
@@ -230,34 +273,7 @@ async function main() {
       }
 
       case 'resolve': {
-        const asOf = values['as-of'] ? Number(values['as-of']) : await latestActivity(db);
-        let launch: LaunchContext | undefined;
-        if (values.launch) {
-          launch = await loadLaunchContext(db, values.launch, asOf);
-          if (!launch) throw new Error(`Launch ${values.launch} not found`);
-        } else {
-          launch = {
-            launchId: 'adhoc',
-            lane: (values.lane ?? 'utility') as Lane,
-            pairClass: (values.pair ?? 'stock') as PairClass,
-            creator: normalizeAddress(values.creator ?? '0x000000000000000000000000000000000000dead'),
-            asOf,
-          };
-        }
-        const config = await configWithHubs(db, values['ignore-hubs']);
-        const wallets = await listProfileWallets(db, asOf);
-        const snapshot = await sparkSnapshotFor(db, asOf);
-        const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: snapshot });
-        const [creatorFacts] = await loadWalletFacts(db, { wallets: [launch.creator], asOf, sparkSnapshotId: snapshot });
-        const template = templateArg();
-        const set = resolveAllocation({
-          policy: TEMPLATES[template].policy,
-          launch,
-          slice: BigInt(values.slice ?? '1000000') * E18,
-          wallets: facts,
-          creatorFacts,
-          config,
-        });
+        const { set, launch, facts, template } = await resolveFromArgs(db, values.launch);
         console.log(`Launch ${set.launchId} (${launch.lane}/${launch.pairClass}), template ${template}, ${facts.length} profiles`);
         console.log(`Policy ${set.policyHash}`);
         console.log(`Merkle ${set.merkleRoot}`);
@@ -306,6 +322,53 @@ async function main() {
           config,
         });
         console.log(renderReport(report));
+        break;
+      }
+
+      case 'showcase-drop': {
+        const key = process.env.DEPLOYER_PRIVATE_KEY as `0x${string}` | undefined;
+        if (!values.rpc || !key) throw new Error('--rpc and the DEPLOYER_PRIVATE_KEY environment variable are required');
+        values.template ??= 'hold_or_die';
+        values['ignore-hubs'] ??= '20';
+        const launchId =
+          values.launch ??
+          (
+            await db.query<{ id: string }>(
+              `SELECT id FROM launches l WHERE graduated_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM scout_drops d WHERE d.launch_id = l.id)
+               ORDER BY graduated_at DESC, id LIMIT 1`,
+            )
+          )[0]?.id;
+        if (!launchId) throw new Error('No graduated launch to drop for. Run `scout simulate` first, or pass --launch.');
+        const { set, template } = await resolveFromArgs(db, launchId);
+        if (!set.recipients.length) throw new Error(`Template ${template} selects nobody for ${launchId}`);
+
+        // Claim batches carry many Merkle proofs; gas estimation for them can take a while on some nodes.
+        const transport = http(values.rpc, { timeout: 120_000 });
+        const pub = createPublicClient({ transport });
+        const chainId = await pub.getChainId();
+        const chain =
+          chainId === robinhoodTestnet.id
+            ? robinhoodTestnet
+            : { ...robinhoodTestnet, id: chainId, name: `chain-${chainId}`, blockExplorers: undefined, rpcUrls: { default: { http: [values.rpc] } } };
+        const account = privateKeyToAccount(key);
+        const wallet = createWalletClient({ transport, chain, account });
+        const balance = await pub.getBalance({ address: account.address });
+        console.log(`${chain.name}: ${launchId}, template ${template}, ${set.recipients.length} recipients, from ${account.address} (${Number(balance) / 1e18} ETH)`);
+
+        const result = await runShowcaseDrop({
+          pub,
+          wallet,
+          set,
+          template,
+          scoutDrop: values.scoutdrop ? normalizeAddress(values.scoutdrop) : undefined,
+          token: values.token ? normalizeAddress(values.token) : undefined,
+          log: (line) => console.log(`  ${line}`),
+        });
+        const out = values.out ?? fileURLToPath(new URL('../../web/lib/onchain-drop.json', import.meta.url));
+        writeFileSync(out, `${JSON.stringify(result, null, 2)}\n`);
+        console.log(`Wrote ${out}`);
+        if (result.explorer) console.log(`ScoutDrop: ${result.explorer}/address/${result.scoutDrop}`);
+        console.log(`Index it with: pnpm scout ingest-drops --rpc ${values.rpc} --contract ${result.scoutDrop} --from-block ${result.fromBlock}`);
         break;
       }
 

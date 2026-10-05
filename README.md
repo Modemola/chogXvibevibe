@@ -196,6 +196,22 @@ resolve → fund → keeper claims → recipients dump, trim, stake or hold → 
 
 The builder's **Download claims + proofs** button (and `POST /api/export?format=claims`) gives the same data for the web flow.
 
+### Showcase drop on Robinhood Chain testnet
+
+`showcase-drop` runs a resolved drop for real: it deploys ScoutDrop and a demo ERC-20 standing in for the launch token
+(or reuses `--scoutdrop` / `--token`), funds the drop with the allocated total, and pushes every claim in batches of 50.
+It writes every address and transaction to `apps/web/lib/onchain-drop.json`; once that is committed, the home page
+shows an on-chain proof panel and the launch page a badge, each linking to the explorer.
+
+```bash
+pnpm scout simulate                       # the same simulated world the website uses
+DEPLOYER_PRIVATE_KEY=0x… pnpm scout showcase-drop --rpc https://rpc.testnet.chain.robinhood.com
+```
+
+Robinhood Chain testnet is chain 46630 (explorer: https://explorer.testnet.chain.robinhood.com). The command defaults to
+the Hold or Die template and the most recently graduated launch without a Scout drop. Use a throwaway key with testnet
+ETH only; a run with ~180 recipients needs roughly 16M gas in total.
+
 ## Scoring model
 
 For wallet `w` and launch `L`:
