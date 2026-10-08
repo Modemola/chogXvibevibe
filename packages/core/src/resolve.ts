@@ -258,7 +258,9 @@ export function resolveAllocation(input: ResolveInput): AllocationSet {
   }
   if (unallocated > 0n) {
     const bps = input.slice > 0n ? Number((unallocated * 10_000n) / input.slice) : 0;
-    warnings.push(`UNALLOCATED: ${unallocated} (${bps / 100}%) could not be placed under the caps; returned to the launch`);
+    // Launch tokens use 18 decimals; show whole tokens, not base units.
+    const tokens = (Number(unallocated) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    warnings.push(`UNALLOCATED: ${tokens} tokens (${bps / 100}%) could not be placed under the caps; returned to the launch`);
   }
 
   return {
