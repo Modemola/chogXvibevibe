@@ -139,7 +139,8 @@ export function problemPoint(g: WorldGeom, p: Particle, t: number): Point {
     const k = clamp((te - start) / 2.2);
     const kk = k * k * k;
     const dx = (g.width * 0.95 + 400 * u) * kk;
-    const dy = -g.height * 0.35 * kk * (0.4 + (p.phase % 1));
+    // Flee right and slightly down, so the streaks never cross the headline above the crowd.
+    const dy = g.height * 0.035 * kk * (p.phase % 1);
     px = x + dx * 0.7;
     py = y + dy * 0.7;
     x += dx;
