@@ -1,6 +1,6 @@
 # Graduation Scout: the launch film
 
-A 3:00 motion-graphics film (1920×1080, 60 fps) and a 30-second vertical teaser (1080×1920), built in code with
+A 3:00 motion-graphics film (1920×1080, 60 fps) and a 30-second teaser (1920×1080, with a 1080×1920 variant), built in code with
 [Remotion](https://www.remotion.dev). Every frame is a pure function of time, so renders are deterministic.
 
 The film reuses the website's design: the silver-noir tokens, Instrument Serif / Inter Tight / JetBrains Mono, and the
@@ -14,7 +14,7 @@ pnpm install --ignore-workspace
 node scripts/score.mjs                     # synthesise public/score.wav (about 40 s)
 pnpm studio                                # preview in the browser
 node scripts/render.mjs Film out/graduation-scout-film.mp4
-node scripts/render.mjs Teaser out/graduation-scout-teaser-vertical.mp4
+node scripts/render.mjs Teaser out/graduation-scout-teaser.mp4           # 16:9; TeaserVertical for 9:16
 node scripts/still.mjs Film out/stills 7 30 50   # stills at given seconds
 ```
 

@@ -49,12 +49,12 @@ export function Film() {
   );
 }
 
-/** The first 30 seconds as a vertical teaser, ending on a title card. */
+/** The first 30 seconds as a teaser, ending on a title card. Rendered 16:9 (Teaser) or 9:16 (TeaserVertical). */
 export function Teaser() {
   const frame = useCurrentFrame();
-  const { width } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const t = frame / 60;
-  const u = width / 1080;
+  const u = height > width ? width / 1080 : height / 1080;
   const end = ramp(t, 27.4, 28.3, softInOut);
   return (
     <AbsoluteFill style={{ background: C.bg }}>
