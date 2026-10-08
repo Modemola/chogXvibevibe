@@ -14,7 +14,7 @@ The tour runs about 65 seconds on its own. The script is timed to 90 seconds, so
 | 0:40 to 0:52 | Holder profile (04 *Every score explains itself*) | "Every score explains itself. These reason codes add up exactly to the number. This wallet held every drop it got." |
 | 0:52 to 1:02 | Dumper profile (05 *Dumping follows you*) | "This one sold inside the hour and sits in a funding cluster. Negative score, so next time it gets nothing. Dumping follows you." |
 | 1:02 to 1:15 | Launch aftermath (06 *Every drop gets a public report card*) | "Every drop gets a public report card: retention at one hour, a day, a week and a month, wallet by wallet. That history feeds the next score, so every drop makes the next one smarter." |
-| 1:15 to 1:30 | Final call to action (07) | "In our simulated world, farms get zero percent with zero false positives, and holders get the lion's share. The ScoutDrop contract is ready. Graduation Scout: curate a community, not a dump." |
+| 1:15 to 1:30 | Final call to action (07) | "In our simulated world, farms get zero percent with zero false positives, and holders get the lion's share. ScoutDrop is already paying out on Robinhood Chain testnet. Graduation Scout: curate a community, not a dump." |
 
 ## Recording tips
 
