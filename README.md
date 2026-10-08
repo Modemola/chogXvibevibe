@@ -286,7 +286,10 @@ A bare boolean field means `== true`.
 - [x] **Milestone 3: API + web app**: signed opt-in and linking, profiles, policy builder with live preview, export, policy locks
 - [x] **Milestone 4: Aftermath**: transfer-based measurement job, per-launch Aftermath cards, API
 - [x] **Milestone 5a: ScoutDrop contract**, chain ingest, drop files, deploy script
-- [ ] Milestone 5b: real vibe/vibe testnet source (needs contract addresses + Robinhood Chain testnet RPC)
+- [x] **Milestone 5b: live on Robinhood Chain testnet**: ScoutDrop at
+  [`0xb78c…aa13`](https://explorer.testnet.chain.robinhood.com/address/0xb78c43e7df50a30d93f33b24de3554c9c286aa13)
+  paid a Hold or Die drop for `sim-0012` to 184 recipients (drop #1, every claim pushed, nothing left unclaimed)
+- [ ] Milestone 6: index real vibe/vibe launches (needs vibe/vibe's contracts once published)
 
 ## Deploying to Vercel
 
