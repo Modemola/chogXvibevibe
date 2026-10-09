@@ -326,6 +326,9 @@ A bare boolean field means `== true`.
 
 ## Status
 
+A full pre-launch verification pass, with every bug it found and the known limits, is in
+[docs/verification.md](docs/verification.md).
+
 - [x] **Milestone 1: core engine** (`@scout/core`)
 - [x] **Milestone 2: data layer**: Postgres schema, SPARK snapshotter, simulated world, `scout` CLI, evaluation
 - [x] **Milestone 3: API + web app**: signed opt-in and linking, profiles, policy builder with live preview, export, policy locks
