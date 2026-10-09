@@ -33,7 +33,7 @@ test('home shows live stats', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /ones who stay/ })).toBeVisible();
   await expect(page.getByText('Opted-in profiles')).toBeVisible();
-  await expect(page.locator('.stat .n').first()).not.toHaveText('0');
+  await expect(page.locator('.stat', { hasText: 'Opted-in profiles' }).locator('.n')).not.toHaveText('0');
   await page.screenshot({ path: 'e2e/screens/home.png', fullPage: true });
 });
 

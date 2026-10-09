@@ -614,3 +614,6 @@ footer.site .mark { font: italic 400 clamp(64px, 14vw, 210px)/0.8 var(--serif); 
 .scout-token-name { font: 400 clamp(30px, 3vw, 40px)/1.1 var(--serif); letter-spacing: -0.01em; }
 .scout-token-name .faint { font-size: 0.55em; margin-left: 6px; }
 @media (max-width: 900px) { .scout-token-card { order: 2; } }
+.live-card { color: inherit; text-decoration: none; }
+.live-name { margin-top: 14px; font: 400 26px/1.15 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-name .faint { font-size: 0.6em; margin-left: 4px; }

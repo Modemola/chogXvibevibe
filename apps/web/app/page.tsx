@@ -1,6 +1,7 @@
 import { Featured, FinalCta, Formula, Hero, Pillars, Proof, StatsBand } from '@/components/home';
 import { OnchainProof, ScoutTokenPanel } from '@/components/onchain';
 import { Sieve } from '@/components/sieve';
+import { LiveSync } from './launches/LiveGrid';
 import { onchainDrop, scoutToken, scoutTokenDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
 
@@ -12,6 +13,7 @@ export default async function Home() {
   const featured = featuredId ? await svc.aftermath(featuredId) : undefined;
   return (
     <>
+      <LiveSync quiet />
       <Hero highlights={highlights} />
       <StatsBand stats={stats} />
       <Pillars />

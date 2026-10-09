@@ -40,7 +40,11 @@ import {
   loadLaunchContext,
   loadWalletFacts,
 } from '@scout/db';
-import { SPARK_BASE } from '@scout/sources';
+import { SPARK_BASE, claimLiveSync, ingestVibeVibe, liveSyncState } from '@scout/sources';
+import { createPublicClient, http } from 'viem';
+
+/** Live indexing starts just before $SCOUT launched (vibe/vibe launch #8422). */
+const LIVE_START_BLOCK = 131_490_000n;
 
 /**
  * Everything the web app and API do, as plain async methods over a Db.
@@ -164,8 +168,10 @@ export class ScoutService {
     const one = async (sql: string) => Number((await this.db.query<{ n: string }>(sql))[0]?.n ?? 0);
     return {
       profiles: await one('SELECT count(*)::text AS n FROM profiles'),
-      launches: await one('SELECT count(*)::text AS n FROM launches'),
-      graduated: await one('SELECT count(*)::text AS n FROM launches WHERE graduated_at IS NOT NULL'),
+      launches: await one("SELECT count(*)::text AS n FROM launches WHERE id NOT LIKE 'vv-%'"),
+      graduated: await one("SELECT count(*)::text AS n FROM launches WHERE graduated_at IS NOT NULL AND id NOT LIKE 'vv-%'"),
+      liveLaunches: await one('SELECT count(*)::text AS n FROM vv_launches'),
+      liveTrades: await one("SELECT count(*)::text AS n FROM trades WHERE launch_id LIKE 'vv-%'"),
       scoutDrops: await one('SELECT count(*)::text AS n FROM scout_drops'),
       lockedPolicies: await one('SELECT count(*)::text AS n FROM policy_locks'),
     };
@@ -185,6 +191,7 @@ export class ScoutService {
       `SELECT l.id, l.creator, l.lane, l.pair_class, l.created_at, l.graduated_at, pl.policy_hash,
               (SELECT count(*)::int FROM scout_drops d WHERE d.launch_id = l.id) AS drops
          FROM launches l LEFT JOIN policy_locks pl ON pl.launch_id = l.id
+        WHERE l.id NOT LIKE 'vv-%'
         ORDER BY l.created_at DESC, l.id LIMIT $1`,
       [limit],
     );
@@ -198,6 +205,103 @@ export class ScoutService {
       lockedPolicy: r.policy_hash,
       drops: Number(r.drops),
     }));
+  }
+
+  // --- Live: real vibe/vibe launches on Robinhood Chain testnet ------------------
+
+  liveGraduatedCount() {
+    return this.db.query<{ n: number }>("SELECT count(*)::int AS n FROM launches WHERE id LIKE 'vv-%' AND graduated_at IS NOT NULL");
+  }
+
+  /** Real launches, newest first, with trading activity. */
+  async liveLaunches(limit = 120) {
+    const rows = await this.db.query<{
+      id: string; number: string; name: string; symbol: string; token: string; pair_class: PairClass; tax_bps: number;
+      created_at: string; graduated_at: string | null; buyers: number; trades: number;
+    }>(
+      `SELECT l.id, v.number, v.name, v.symbol, l.token, l.pair_class, l.tax_bps, l.created_at, l.graduated_at,
+              (SELECT count(DISTINCT t.wallet)::int FROM trades t WHERE t.launch_id = l.id AND t.side = 'buy') AS buyers,
+              (SELECT count(*)::int FROM trades t WHERE t.launch_id = l.id) AS trades
+         FROM vv_launches v JOIN launches l ON l.id = v.launch_id
+        ORDER BY v.number DESC LIMIT $1`,
+      [Math.min(Math.max(1, limit), 500)],
+    );
+    return rows.map((r) => ({
+      id: r.id, number: Number(r.number), name: r.name, symbol: r.symbol, token: r.token, pairClass: r.pair_class,
+      taxBps: Number(r.tax_bps), createdAt: Number(r.created_at), graduatedAt: r.graduated_at === null ? null : Number(r.graduated_at),
+      buyers: Number(r.buyers), trades: Number(r.trades),
+    }));
+  }
+
+  /**
+   * Scout's read of a real launch, as counts only: who bought before graduation (or so far), how many
+   * flipped within an hour, how many trade in lockstep with other wallets, how many signed up.
+   * No individual wallet is listed: these wallets never opted in.
+   */
+  async liveLaunch(id: string) {
+    const [row] = await this.db.query<{
+      id: string; number: string; name: string; symbol: string; uri: string; pool: string; token: string; creator: string;
+      pair_class: PairClass; pair_token: string | null; tax_bps: number; created_at: string; graduated_at: string | null;
+    }>(
+      `SELECT l.id, v.number, v.name, v.symbol, v.uri, v.pool, l.token, l.creator, l.pair_class, l.pair_token, l.tax_bps,
+              l.created_at, l.graduated_at
+         FROM vv_launches v JOIN launches l ON l.id = v.launch_id WHERE l.id = $1`,
+      [id],
+    );
+    if (!row) throw new ApiError(404, `Live launch ${id} not found`);
+    const graduatedAt = row.graduated_at === null ? null : Number(row.graduated_at);
+    const cutoff = graduatedAt ?? this.now();
+    const buyers = await this.db.query<{ wallet: string; bought: string; sold1h: string; sold: string; opted: boolean }>(
+      `WITH b AS (
+         SELECT wallet, min(ts) AS first_buy, sum(token_amount) AS bought
+           FROM trades WHERE launch_id = $1 AND side = 'buy' AND ts <= $2 GROUP BY wallet)
+       SELECT b.wallet, b.bought::text,
+              coalesce(sum(t.token_amount) FILTER (WHERE t.ts <= b.first_buy + 3600), 0)::text AS sold1h,
+              coalesce(sum(t.token_amount) FILTER (WHERE t.ts <= $2), 0)::text AS sold,
+              EXISTS (SELECT 1 FROM profiles p WHERE p.wallet = b.wallet) AS opted
+         FROM b LEFT JOIN trades t ON t.launch_id = $1 AND t.wallet = b.wallet AND t.side = 'sell'
+        GROUP BY b.wallet, b.bought, b.first_buy`,
+      [id, cutoff],
+    );
+    const flipped = buyers.filter((b) => BigInt(b.sold1h) * 10n >= BigInt(b.bought) * 8n).length;
+    const holding = buyers.filter((b) => BigInt(b.sold) < BigInt(b.bought)).length;
+    // Lockstep: buyers linked to other wallets by copied early buys or a shared funder, using every indexed wallet as evidence.
+    let lockstep = 0;
+    if (buyers.length) {
+      const pop = await this.population(this.asOf());
+      const facts = await loadWalletFacts(this.db, { wallets: buyers.map((b) => b.wallet as Address), asOf: this.asOf() });
+      const clusters = clusterWallets(facts, pop.config, pop.evidence);
+      lockstep = facts.filter((f) => (clusters.get(f.wallet)?.detectedSize ?? 1) > 1).length;
+    }
+    const [{ trades = 0 } = {}] = await this.db.query<{ trades: number }>('SELECT count(*)::int AS trades FROM trades WHERE launch_id = $1', [id]);
+    return {
+      id: row.id, number: Number(row.number), name: row.name, symbol: row.symbol, uri: row.uri, pool: row.pool, token: row.token,
+      creator: row.creator, pairClass: row.pair_class, pairToken: row.pair_token, taxBps: Number(row.tax_bps),
+      createdAt: Number(row.created_at), graduatedAt, trades: Number(trades),
+      read: { buyers: buyers.length, flipped, holding, lockstep, signedUp: buyers.filter((b) => b.opted).length },
+    };
+  }
+
+  /**
+   * Pulls new vibe/vibe activity from the chain, at most once a minute and within a time budget,
+   * so a page visit can keep the live data fresh on a serverless host. Safe to call concurrently.
+   */
+  async syncLive(opts: { budgetMs?: number; force?: boolean } = {}) {
+    if (process.env.SCOUT_LIVE === '0') return { skipped: 'disabled' as const };
+    if (!opts.force && !(await claimLiveSync(this.db, this.now()))) {
+      const state = await liveSyncState(this.db);
+      return { skipped: 'fresh' as const, block: state?.block.toString() };
+    }
+    const client = createPublicClient({ transport: http(process.env.SCOUT_LIVE_RPC ?? 'https://rpc.testnet.chain.robinhood.com', { timeout: 20_000 }) });
+    const deadline = Date.now() + (opts.budgetMs ?? 8_000);
+    let r;
+    let added = { launches: 0, trades: 0, graduations: 0 };
+    do {
+      r = await ingestVibeVibe(this.db, { client, startBlock: LIVE_START_BLOCK, maxBlocks: 25_000n, now: this.now() });
+      added = { launches: added.launches + r.launches, trades: added.trades + r.trades, graduations: added.graduations + r.graduations };
+    } while (!r.caughtUp && Date.now() < deadline);
+    if (added.trades || added.launches) this.invalidate();
+    return { ...added, block: r.toBlock.toString(), head: r.head.toString(), caughtUp: r.caughtUp };
   }
 
   /** Recent measured drop outcomes (latest window per drop), for the live ticker. */

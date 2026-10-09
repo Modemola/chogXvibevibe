@@ -257,6 +257,34 @@ DEPLOYER_PRIVATE_KEY=0x… pnpm scout showcase-drop --rpc https://rpc.testnet.ch
 
 The token details on the site come from `apps/web/lib/scout-token.json`.
 
+## Live: real vibe/vibe data
+
+Scout reads vibe/vibe straight from Robinhood Chain testnet. The contracts are not published, so the events were
+decoded from known transactions (the $SCOUT launch, real buys and sells, a graduation) and the decoders are tested
+against those recorded receipts, cross-checked with the token transfers in each one
+(`packages/sources/src/vibevibe.ts`, `packages/sources/test/vibevibe.test.ts`).
+
+| Event | Contract | Gives Scout |
+|---|---|---|
+| Launch | factory `0xe794…fea0` | launch number, creator, token, bonding pool, name, symbol, pair (ETH, a tokenised stock, or VIBEVIBE), tax, 4 ETH target |
+| Launch buy, buy, sell | each bonding pool | buyer or seller (not the router), tokens, pair-token amount |
+| Graduation | each bonding pool | graduation time; liquidity then moves to Uniswap v4 |
+
+```bash
+pnpm scout ingest-vibevibe --rpc https://rpc.testnet.chain.robinhood.com   # from just before $SCOUT to now
+```
+
+The first run indexed 331 launches, 4,769 trades and 94 graduations in under a minute. The website keeps itself
+current: a page visit triggers at most one bounded sync a minute (`/api/live/sync`; `SCOUT_LIVE=0` turns it off).
+Real launches are stored as `vv-<number>` next to the simulated world and appear under **Live** on the launches
+page. Each one gets **Scout's read**: how many wallets bought before graduation, how many sold 80% or more within an
+hour of their first buy, how many trade in lockstep with other wallets, and how many signed up. These are counts
+only: wallets that never opted in are never listed. Real wallets that sign up are scored on their real trades.
+
+Limits: vibe/vibe has no lanes, so live launches are treated as `meme` (no lane bonus); plain ETH transfers leave no
+event, so the shared-funder signal is not available for live wallets yet (copied buys are); trades after graduation
+happen on Uniswap v4 and are not indexed yet.
+
 ## Scoring model
 
 For wallet `w` and launch `L`:

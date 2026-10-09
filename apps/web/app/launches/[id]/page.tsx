@@ -7,6 +7,7 @@ import { date, pct, short, tokens } from '@/lib/format';
 import { onchainDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
 import { isApiError } from '@/lib/service';
+import { LiveLaunch } from './LiveLaunch';
 import { StackBar } from './StackBar';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ const SHORT = { h1: '1h', h24: '24h', d7: '7d', d30: '30d' } as const;
 
 export default async function AftermathPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (decodeURIComponent(id).startsWith('vv-')) return <LiveLaunch id={decodeURIComponent(id)} />;
   let a;
   try {
     a = await (await getService()).aftermath(decodeURIComponent(id));

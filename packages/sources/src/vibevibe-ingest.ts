@@ -109,3 +109,18 @@ export async function liveSyncState(db: Db): Promise<{ block: bigint; updatedAt:
   const [row] = await db.query<{ cursor: { block: string }; updated_at: string }>('SELECT cursor, updated_at FROM source_cursors WHERE source = $1', [CURSOR]);
   return row ? { block: BigInt(row.cursor.block), updatedAt: Number(row.updated_at) } : undefined;
 }
+
+/**
+ * Claims the next live sync: true for at most one caller per `gapSec`, so concurrent page visits
+ * don't all index the same blocks. The first sync ever (no cursor yet) is always allowed.
+ */
+export async function claimLiveSync(db: Db, now: number, gapSec = 60): Promise<boolean> {
+  const [row] = await db.query('SELECT 1 FROM source_cursors WHERE source = $1', [CURSOR]);
+  if (!row) return true;
+  const claimed = await db.query('UPDATE source_cursors SET updated_at = $2 WHERE source = $1 AND updated_at <= $3 RETURNING source', [
+    CURSOR,
+    now,
+    now - gapSec,
+  ]);
+  return claimed.length > 0;
+}

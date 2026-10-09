@@ -1,7 +1,7 @@
 import { createPgliteDb, migrate } from '@scout/db';
 import { describe, expect, it } from 'vitest';
 import { type RawLog, VV_TOPICS } from '../src/vibevibe.js';
-import { ingestVibeVibe, liveSyncState } from '../src/vibevibe-ingest.js';
+import { claimLiveSync, ingestVibeVibe, liveSyncState } from '../src/vibevibe-ingest.js';
 import receipts from './fixtures/vibevibe-receipts.json' with { type: 'json' };
 
 const R = receipts as unknown as Record<string, { logs: RawLog[] }>;
@@ -65,6 +65,11 @@ describe('ingestVibeVibe', () => {
     const again = await ingestVibeVibe(db, { client, startBlock: 131_490_000n, chunkSize: 50_000n, now: 2 });
     expect(again).toMatchObject({ launches: 0, trades: 0, caughtUp: true });
     expect((await liveSyncState(db))!.block).toBe(first.toBlock);
+
+    // One sync per minute: the first claim wins, the next is refused until a minute has passed.
+    expect(await claimLiveSync(db, 1_000)).toBe(true);
+    expect(await claimLiveSync(db, 1_030)).toBe(false);
+    expect(await claimLiveSync(db, 1_061)).toBe(true);
     await db.close();
   });
 

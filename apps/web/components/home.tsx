@@ -20,6 +20,8 @@ export interface HomeStats {
   graduated: number;
   scoutDrops: number;
   lockedPolicies: number;
+  liveLaunches: number;
+  liveTrades: number;
 }
 
 export interface Highlight {
@@ -85,11 +87,11 @@ export function Hero({ highlights }: { highlights: Highlight[] }) {
 /** Full-bleed hairline band of live numbers. */
 export function StatsBand({ stats }: { stats: HomeStats }) {
   const tiles: [string, number, string][] = [
+    ['Live vibe/vibe launches', stats.liveLaunches, ''],
+    ['Live trades read', stats.liveTrades, ''],
     ['Opted-in profiles', stats.profiles, ''],
-    ['Launches indexed', stats.launches, ''],
-    ['Graduated', stats.graduated, ''],
+    ['Simulated launches', stats.launches, ''],
     ['Scout drops tracked', stats.scoutDrops, ''],
-    ['Of the slice to farms', 0, '%'],
   ];
   return (
     <div className="stats-band">

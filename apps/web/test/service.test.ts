@@ -231,6 +231,31 @@ describe('ScoutService', () => {
     await expectApiError(svc.preview({ policy, launch: { launchId: 'nope' }, sliceTokens: '1000' }), 404);
   });
 
+  it("reads a live launch as counts: buyers, flippers, holders, sign-ups", async () => {
+    const T = 1_790_000_000;
+    const E = 10n ** 18n;
+    await db.query(
+      `INSERT INTO launches (id, token, creator, lane, pair_class, tax_bps, created_at, graduated_at) VALUES ('vv-1', '0x00000000000000000000000000000000000000t1', '0x00000000000000000000000000000000000000c1', 'meme', 'eth', 100, $1, $2)`,
+      [T, T + 7200],
+    );
+    await db.query(`INSERT INTO vv_launches VALUES ('vv-1', 1, '0x00000000000000000000000000000000000000p1', 'Test', 'TST', 'ipfs://x', 1, '0x01')`);
+    const trade = (n: number, wallet: string, side: string, amount: bigint, ts: number) =>
+      db.query('INSERT INTO trades VALUES ($1, 0, $2, $3, $4, $5, 0, $6)', [`0x${n}`, 'vv-1', wallet, side, amount.toString(), ts]);
+    const flipper = '0x00000000000000000000000000000000000000f1';
+    const holder = A; // opted in earlier in this suite
+    const late = '0x00000000000000000000000000000000000000f3';
+    await trade(1, flipper, 'buy', 100n * E, T + 60);
+    await trade(2, flipper, 'sell', 90n * E, T + 1800); // 90% within the hour
+    await trade(3, holder, 'buy', 50n * E, T + 120);
+    await trade(4, holder, 'sell', 10n * E, T + 5000); // trims later, still holding
+    await trade(5, late, 'buy', 10n * E, T + 9000); // after graduation: not counted
+    const l = await svc.liveLaunch('vv-1');
+    expect(l).toMatchObject({ symbol: 'TST', trades: 5, read: { buyers: 2, flipped: 1, holding: 2, signedUp: 1 } });
+    expect((await svc.liveLaunches()).map((x) => x.id)).toContain('vv-1');
+    expect((await svc.launches()).map((x) => x.id)).not.toContain('vv-1');
+    await expectApiError(svc.liveLaunch('vv-nope'), 404);
+  });
+
   it('refuses to lock a policy once the launch has graduated', async () => {
     const { hash } = await svc.savePolicy(TEMPLATES.spark_core.policy);
     const launchId = world.batch.launches![1]!.id;

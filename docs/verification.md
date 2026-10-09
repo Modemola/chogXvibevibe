@@ -52,5 +52,6 @@ Totals after the pass: 124 unit and integration tests plus 7 browser tests, all 
 - **Smart-contract wallets** (ERC-1271) cannot sign up yet; only regular wallets can.
 - **Fee-on-transfer and rebasing tokens** cannot be dropped through ScoutDrop by design; the keeper detects this before
   spending gas.
-- **Simulated data.** Scores and evaluations run on a simulated world until vibe/vibe's contracts are public. The
-  on-chain drop is real.
+- **Simulated evaluation.** Scoring is evaluated on a simulated world, where the ground truth is known. Real vibe/vibe
+  launches and trades are indexed live from Robinhood Chain testnet (decoders tested against recorded real receipts),
+  and the on-chain drop is real.
