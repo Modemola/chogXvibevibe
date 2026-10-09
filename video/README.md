@@ -58,11 +58,15 @@ endorsement from vibe/vibe.
 
 ## Sound
 
-`scripts/score.mjs` synthesises a quiet ambient score:
-- low pads that change chord with each scene;
-- soft sub pulses on scene changes;
-- glassy bells on key moments (droplet, title, signature, policy lock, all wallets paid, end card);
-- a swell into the on-chain scene;
-- a moment of silence before the final line.
+`scripts/pulse.mjs` synthesises the soundtrack: a dark, minimal electronic pulse in D minor, mixed to about −14 dBFS
+for social feeds and cut to the picture.
 
-There is no voiceover. To use your own music, replace `public/score.wav` and re-render.
+- **Teaser** (`node scripts/pulse.mjs public/pulse-teaser.wav`): a heartbeat under the open, chimes as the droplet lands
+  and the title appears, an impact as the orb shatters, a 100 BPM pulse with a riser, a beat of silence, a resolve
+  on the end card.
+- **Film** (`node scripts/pulse.mjs public/pulse-film.wav film`): one chord per scene; falling sweeps as dumpers flee,
+  the price collapses and farms drop through the sieve; a calm arpeggio for the idea; the loudest pass for the
+  on-chain payout; the heartbeat again in the aftermath; a breath of silence before the final line.
+
+The finished videos carry this score (muxed in with ffmpeg). `scripts/score.mjs` is the earlier, quieter ambient
+score that the compositions still reference as `public/score.wav`. There is no voiceover.
