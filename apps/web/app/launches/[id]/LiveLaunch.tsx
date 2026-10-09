@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { CountUp, Item, Reveal, Stagger, Tilt } from '@/components/motion';
+import { OnchainBadge } from '@/components/onchain';
 import { PageHead } from '@/components/page-head';
+import { scoutTokenDrop } from '@/lib/onchain';
 import { date, short } from '@/lib/format';
 import { getService } from '@/lib/server';
 import { isApiError } from '@/lib/service';
@@ -47,6 +49,8 @@ export async function LiveLaunch({ id }: { id: string }) {
           </>
         }
       />
+
+      {scoutTokenDrop?.launchId === l.id && <OnchainBadge drop={scoutTokenDrop} />}
 
       <Stagger className="grid cols-4">
         {cards.map(([label, n, sub, tone]) => (

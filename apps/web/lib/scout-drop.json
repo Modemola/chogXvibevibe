@@ -1,1 +1,28 @@
-{}
+{
+  "chainId": 46630,
+  "chainName": "Robinhood Chain Testnet",
+  "explorer": "https://explorer.testnet.chain.robinhood.com",
+  "deployer": "0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185",
+  "scoutDrop": "0xb78c43e7df50a30d93f33b24de3554c9c286aa13",
+  "token": "0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de",
+  "dropId": "2",
+  "launchId": "vv-8422",
+  "template": "hold_or_die",
+  "policyHash": "0xb5c24370e77d742c8d5971a786f0fc7d6aa06b6d08bd1f932a5d074d3b47cbbc",
+  "merkleRoot": "0x3874d0237ca1236120e77511a0ff56d5dab634fdb2642a90d1eb1f5651983bff",
+  "total": "8930000000000000000000000",
+  "recipients": 183,
+  "claimed": 183,
+  "txs": {
+    "approve": "0x70ef8e11f49f01e6d45d6a700b9d8c521fb1f4e753cf5573aacbd7bab080100f",
+    "createDrop": "0xf13bd23a93964ec9ab7aded3773a573adfbe3c89ef6ef71ed82d45554018699c",
+    "claims": [
+      "0x346c4e4b3af37aa2154cef9298b92780041c854d8f6be42870d03cd8839791d9",
+      "0x4e795b154a6f8f8ece83badb8ec81ebd8ca82e63ce06a03409707844e4973903",
+      "0x79d7c45abea1267fe5020e0cb246b151a30eac7b9a5efc8b050e35655906a6c8",
+      "0xc25c6637d478f815321dd5fa62c04e9cfa7d29f4f8d42188dfb01c698aa4b80b"
+    ]
+  },
+  "fromBlock": "131865720",
+  "createdAt": "2026-10-09T22:18:00.621Z"
+}

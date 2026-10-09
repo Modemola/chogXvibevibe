@@ -235,27 +235,25 @@ ETH only; a run with ~180 recipients needs roughly 16M gas in total.
 ### $SCOUT, our own token
 
 Graduation Scout has its own token, launched on vibe/vibe testnet like any creator's:
-**$SCOUT** (Graduation Scout) at `0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de`, launch #8422, 1,000,000,000 supply,
-graduating at 4 ETH. The drop wallet bought 10,000,000 SCOUT at launch to fund its Scout drop.
+**$SCOUT** (Graduation Scout) at `0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de`, launch #8422, 1,000,000,000 supply.
+The drop wallet bought 10,000,000 SCOUT at launch to fund its Scout drop; vibe/vibe locks transfers until a token
+graduates, so the drop had to wait.
 
-vibe/vibe locks transfers (`TransfersLocked()`) until a token graduates, so the drop cannot be funded before then.
-`showcase-drop` checks this first and stops without sending anything. Check the token at any time with:
+**$SCOUT graduated on 2026-10-09 at 18:52 UTC** (block 131787178). Scout resolved Hold or Die for launch `vv-8422`
+as of that moment, and ScoutDrop paid **8,930,000 SCOUT to 183 wallets** in drop #2 on the same contract as drop #1
+(createDrop `0xf13bd23a93964ec9ab7aded3773a573adfbe3c89ef6ef71ed82d45554018699c`). Every recipient was checked
+on-chain afterwards: all 183 claimed, each balance at least its allocation, and an independent re-resolution gives
+the same Merkle root and policy hash as the ones sealed on-chain. The recipients are Scout's simulated profiles
+(real wallets have not signed up yet), so the tokens went to the addresses of the simulated world.
 
 ```bash
 pnpm scout token-status --rpc https://rpc.testnet.chain.robinhood.com --token 0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de
-# exits 2 while transfers are locked
-```
-
-Once transfers open, the drop runs on the existing ScoutDrop and is written to `apps/web/lib/scout-drop.json`, which
-switches the home page's $SCOUT panel from "waiting for graduation" to the paid-out drop:
-
-```bash
-DEPLOYER_PRIVATE_KEY=0x… pnpm scout showcase-drop --rpc https://rpc.testnet.chain.robinhood.com \
+DEPLOYER_PRIVATE_KEY=0x… pnpm scout showcase-drop --rpc https://rpc.testnet.chain.robinhood.com --launch vv-8422 \
   --scoutdrop 0xb78c43e7df50a30d93f33b24de3554c9c286aa13 --token 0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de \
   --slice 10000000 --out "$PWD/apps/web/lib/scout-drop.json"
 ```
 
-The token details on the site come from `apps/web/lib/scout-token.json`.
+The drop record is `apps/web/lib/scout-drop.json`; the home page's $SCOUT panel and the live launch page show it.
 
 ## Live: real vibe/vibe data
 
