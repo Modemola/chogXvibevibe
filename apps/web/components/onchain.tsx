@@ -136,12 +136,23 @@ export function ScoutTokenPanel({ token, drop }: { token: ScoutToken; drop: Onch
               </dd>
               <dt>Supply</dt>
               <dd className="mono">{tokens(token.supply, 0)}</dd>
-              <dt>Graduates at</dt>
+              <dt>{drop ? 'Graduated at' : 'Graduates at'}</dt>
               <dd className="mono">{token.graduatesAtEth} ETH</dd>
-              <dt>Held for the drop</dt>
-              <dd>
-                <Ext href={explorerAddress(token, token.dropWallet)}>{tokens(token.reserved, 0)}</Ext>
-              </dd>
+              {drop ? (
+                <>
+                  <dt>Dropped</dt>
+                  <dd>
+                    <Ext href={explorerTx(drop, drop.txs.createDrop)}>{`${tokens(drop.total, 0)} to ${drop.claimed}`}</Ext>
+                  </dd>
+                </>
+              ) : (
+                <>
+                  <dt>Held for the drop</dt>
+                  <dd>
+                    <Ext href={explorerAddress(token, token.dropWallet)}>{tokens(token.reserved, 0)}</Ext>
+                  </dd>
+                </>
+              )}
               <dt>Paid by</dt>
               <dd>
                 <Ext href={explorerAddress(token, token.scoutDrop)}>ScoutDrop {short(token.scoutDrop)}</Ext>
