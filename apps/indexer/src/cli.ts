@@ -3,27 +3,21 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
-  DEFAULT_SCORING_CONFIG,
-  type LaunchContext,
   type Lane,
   type PairClass,
-  type ScoringConfig,
-  TEMPLATES,
   TEMPLATE_IDS,
   type TemplateId,
   allocationToCsv,
   normalizeAddress,
   type Address,
-  resolveAllocation,
 } from '@scout/core';
 import {
   type Db,
   hubFunders,
-  latestSnapshotId,
   listProfileWallets,
-  loadLaunchContext,
   loadSimLabels,
   loadEvidenceFacts,
+  loadPolicyLock,
   loadWalletFacts,
   migrate,
   openDb,
@@ -36,6 +30,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { SPARK_BASE, createBaseClient, createRpcClient, simulateWorld, snapshotErc20 } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
 import { ingestScoutDrops } from './onchain.js';
+import { configWithHubs, latestActivity, resolveLaunch, sparkSnapshotFor } from './resolve-launch.js';
 import { robinhoodTestnet, runShowcaseDrop, transfersOpen } from './testnet.js';
 
 const USAGE = `scout <command> [options]
@@ -107,70 +102,27 @@ const { positionals, values } = parseArgs({
 const int = (v: string | undefined, d: number) => (v === undefined ? d : Number.parseInt(v, 10));
 const E18 = 10n ** 18n;
 
-async function latestActivity(db: Db): Promise<number> {
-  const [row] = await db.query<{ t: string | null }>(
-    'SELECT GREATEST((SELECT max(ts) FROM trades), (SELECT max(opted_in_at) FROM profiles)) AS t',
-  );
-  return row?.t ? Number(row.t) : Math.floor(Date.now() / 1000);
-}
-
-async function configWithHubs(db: Db, minFanout: string | undefined): Promise<ScoringConfig> {
-  if (minFanout === undefined) return DEFAULT_SCORING_CONFIG;
-  const hubs = await hubFunders(db, Number(minFanout));
-  console.error(`Ignoring ${hubs.length} hub funder(s) with fanout >= ${minFanout}`);
-  return { ...DEFAULT_SCORING_CONFIG, sybil: { ...DEFAULT_SCORING_CONFIG.sybil, ignoredFunders: hubs.map((h) => h.funder) } };
-}
-
-async function sparkSnapshotFor(db: Db, asOf: number): Promise<string | undefined> {
-  // Prefer the real SPARK snapshot; fall back to whatever the simulator wrote.
-  const real = await latestSnapshotId(db, SPARK_BASE, asOf);
-  if (real) return real;
-  const [row] = await db.query<{ id: string }>(
-    'SELECT id FROM snapshots WHERE taken_at <= $1 ORDER BY taken_at DESC, id DESC LIMIT 1',
-    [asOf],
-  );
-  return row?.id;
-}
-
 function templateArg(): TemplateId {
   const t = (values.template ?? 'custom') as TemplateId;
   if (!TEMPLATE_IDS.includes(t)) throw new Error(`Unknown template '${t}'. One of: ${TEMPLATE_IDS.join(', ')}`);
   return t;
 }
 
-/** Resolves a template over every opted-in profile for --launch (or an ad-hoc launch from --lane/--pair/--creator). */
-async function resolveFromArgs(db: Db, launchId: string | undefined) {
-  const asOf = values['as-of'] ? Number(values['as-of']) : await latestActivity(db);
-  let launch: LaunchContext | undefined;
-  if (launchId) {
-    launch = await loadLaunchContext(db, launchId, asOf);
-    if (!launch) throw new Error(`Launch ${launchId} not found`);
-  } else {
-    launch = {
+/** Resolves for --launch (or an ad-hoc launch from --lane/--pair/--creator); see resolveLaunch. */
+function resolveFromArgs(db: Db, launchId: string | undefined) {
+  if (values.template) templateArg();
+  return resolveLaunch(db, {
+    launch: launchId ?? {
       launchId: 'adhoc',
       lane: (values.lane ?? 'utility') as Lane,
       pairClass: (values.pair ?? 'stock') as PairClass,
       creator: normalizeAddress(values.creator ?? '0x000000000000000000000000000000000000dead'),
-      asOf,
-    };
-  }
-  const config = await configWithHubs(db, values['ignore-hubs']);
-  const wallets = await listProfileWallets(db, asOf);
-  const snapshot = await sparkSnapshotFor(db, asOf);
-  const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: snapshot });
-  const [creatorFacts] = await loadWalletFacts(db, { wallets: [launch.creator], asOf, sparkSnapshotId: snapshot });
-  const evidence = await loadEvidenceFacts(db, { asOf });
-  const template = templateArg();
-  const set = resolveAllocation({
-    policy: TEMPLATES[template].policy,
-    launch,
-    slice: BigInt(values.slice ?? '1000000') * E18,
-    wallets: facts,
-    evidence,
-    creatorFacts,
-    config,
+    },
+    ...(values.template ? { template: values.template as TemplateId } : {}),
+    ...(values['as-of'] ? { asOf: Number(values['as-of']) } : {}),
+    sliceTokens: BigInt(values.slice ?? '1000000'),
+    ...(values['ignore-hubs'] !== undefined ? { ignoreHubsMinFanout: Number(values['ignore-hubs']) } : {}),
   });
-  return { set, launch, facts, template };
 }
 
 async function main() {
@@ -281,8 +233,8 @@ async function main() {
       }
 
       case 'resolve': {
-        const { set, launch, facts, template } = await resolveFromArgs(db, values.launch);
-        console.log(`Launch ${set.launchId} (${launch.lane}/${launch.pairClass}), template ${template}, ${facts.length} profiles`);
+        const { set, launch, facts, template, locked } = await resolveFromArgs(db, values.launch);
+        console.log(`Launch ${set.launchId} (${launch.lane}/${launch.pairClass}), template ${template}${locked ? ' (locked by the creator)' : ''}, ${facts.length} profiles`);
         console.log(`Policy ${set.policyHash}`);
         console.log(`Merkle ${set.merkleRoot}`);
         console.log(`Allocated ${(Number((set.allocated * 10_000n) / set.slice) / 100).toFixed(2)}% to ${set.recipients.length} wallets`);
@@ -318,7 +270,7 @@ async function main() {
         const asOf = values['as-of'] ? Number(values['as-of']) : await latestActivity(db);
         const labels = await loadSimLabels(db);
         if (!labels.size) throw new Error('No simulator labels found. Run `scout simulate` first.');
-        const config = await configWithHubs(db, values['ignore-hubs']);
+        const config = await configWithHubs(db, values['ignore-hubs'] === undefined ? undefined : Number(values['ignore-hubs']));
         const wallets = await listProfileWallets(db, asOf);
         const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: await sparkSnapshotFor(db, asOf) });
         const report = evaluate({
@@ -337,7 +289,6 @@ async function main() {
       case 'showcase-drop': {
         const key = process.env.DEPLOYER_PRIVATE_KEY as `0x${string}` | undefined;
         if (!values.rpc || !key) throw new Error('--rpc and the DEPLOYER_PRIVATE_KEY environment variable are required');
-        values.template ??= 'hold_or_die';
         values['ignore-hubs'] ??= '20';
         const launchId =
           values.launch ??
@@ -348,6 +299,7 @@ async function main() {
             )
           )[0]?.id;
         if (!launchId) throw new Error('No graduated launch to drop for. Run `scout simulate` first, or pass --launch.');
+        if (!(await loadPolicyLock(db, launchId))) values.template ??= 'hold_or_die';
         const { set, template } = await resolveFromArgs(db, launchId);
         if (!set.recipients.length) throw new Error(`Template ${template} selects nobody for ${launchId}`);
 

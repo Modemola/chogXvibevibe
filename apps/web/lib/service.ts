@@ -418,6 +418,8 @@ export class ScoutService {
   async issueNonce(): Promise<{ nonce: string; issuedAt: number }> {
     const nonce = randomBytes(16).toString('hex');
     const issuedAt = this.now();
+    // Expired nonces can never be used again; drop them so requesting nonces can't grow the table forever.
+    await this.db.query('DELETE FROM auth_nonces WHERE created_at < $1', [issuedAt - this.nonceTtl]);
     await this.db.query('INSERT INTO auth_nonces (nonce, created_at) VALUES ($1, $2)', [nonce, issuedAt]);
     return { nonce, issuedAt };
   }
@@ -501,6 +503,13 @@ export class ScoutService {
     const launch = await loadLaunchContext(this.db, action.launchId, this.now());
     if (!launch) throw new ApiError(404, `Launch ${action.launchId} not found`);
     if (launch.creator !== action.creator) throw new ApiError(403, 'Only the launch creator can lock its policy');
+    // Rules are committed before the outcome is known: once a launch graduates, its drop can be resolved,
+    // so locking then would let a creator pick the policy that favours wallets they choose.
+    const [{ graduated_at } = { graduated_at: null }] = await this.db.query<{ graduated_at: string | null }>(
+      'SELECT graduated_at FROM launches WHERE id = $1',
+      [action.launchId],
+    );
+    if (graduated_at !== null && Number(graduated_at) <= this.now()) throw new ApiError(409, 'This launch has already graduated; its policy can no longer be locked');
     await this.getPolicy(action.policyHash); // must be saved first
     await this.requireSignature(input.message, action.creator, input.signature, 'creator');
     const [existing] = await this.db.query('SELECT 1 FROM policy_locks WHERE launch_id = $1', [action.launchId]);

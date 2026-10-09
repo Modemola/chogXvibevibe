@@ -146,9 +146,9 @@ describe('ScoutService', () => {
     expect((await svc.savePolicy(TEMPLATES.hold_or_die.policy)).hash).toBe(hash);
     expect((await svc.getPolicy(hash)).policy.template).toBe('hold_or_die');
 
-    // Pretend alice created launch 0.
+    // Pretend alice created launch 0, which has not graduated yet.
     const launchId = world.batch.launches![0]!.id;
-    await db.query('UPDATE launches SET creator = $1 WHERE id = $2', [A, launchId]);
+    await db.query('UPDATE launches SET creator = $1, graduated_at = NULL WHERE id = $2', [A, launchId]);
 
     const env = await svc.issueNonce();
     const byBob = buildMessage({ kind: 'lock_policy', creator: B, launchId, policyHash: hash }, env);
@@ -161,5 +161,52 @@ describe('ScoutService', () => {
     const env2 = await svc.issueNonce();
     const again = buildMessage({ kind: 'lock_policy', creator: A, launchId, policyHash: hash }, env2);
     await expectApiError(svc.lockPolicy({ message: again, signature: await alice.signMessage({ message: again }) }), 409);
+  });
+
+  it('keeps links one level deep even when every wallet signs', async () => {
+    const carol = privateKeyToAccount(generatePrivateKey());
+    const C = normalizeAddress(carol.address);
+    // B is already A's alt, so B cannot become a primary.
+    const env = await svc.issueNonce();
+    const message = buildMessage({ kind: 'link', primary: B, alt: C }, env);
+    await expectApiError(
+      svc.link({ message, signature: await carol.signMessage({ message }), primarySignature: await bob.signMessage({ message }) }),
+      409,
+      /already linked as an alt/,
+    );
+    // A has alts, so A cannot become someone else's alt.
+    const env2 = await svc.issueNonce();
+    const msg2 = buildMessage({ kind: 'link', primary: C, alt: A }, env2);
+    await expectApiError(
+      svc.link({ message: msg2, signature: await alice.signMessage({ message: msg2 }), primarySignature: await carol.signMessage({ message: msg2 }) }),
+      409,
+      /alts of its own/,
+    );
+  });
+
+  it('refuses to lock a policy once the launch has graduated', async () => {
+    const { hash } = await svc.savePolicy(TEMPLATES.spark_core.policy);
+    const launchId = world.batch.launches![1]!.id;
+    await db.query('UPDATE launches SET creator = $1, graduated_at = $2 WHERE id = $3', [A, clock - 60, launchId]);
+    const env = await svc.issueNonce();
+    const message = buildMessage({ kind: 'lock_policy', creator: A, launchId, policyHash: hash }, env);
+    await expectApiError(svc.lockPolicy({ message, signature: await alice.signMessage({ message }) }), 409, /graduated/);
+  });
+
+  it('rejects tampered, cross-purpose and one-sided messages', async () => {
+    const env = await svc.issueNonce();
+    const message = buildMessage({ kind: 'opt_in', wallet: B }, env);
+    const signature = await bob.signMessage({ message });
+    // Same signature, wallet line swapped to someone else.
+    await expectApiError(svc.optIn({ message: message.replace(B, A), signature }), 401);
+    // An opt-in message is not a link message.
+    await expectApiError(svc.link({ message, signature, primarySignature: signature }), 400, /link/);
+    // Extra text appended to an otherwise valid message.
+    await expectApiError(svc.optIn({ message: `${message}\nAlso: transfer everything`, signature }), 400);
+    // A nonce that was never issued.
+    const fake = buildMessage({ kind: 'opt_in', wallet: B }, { nonce: 'deadbeef', issuedAt: clock });
+    await expectApiError(svc.optIn({ message: fake, signature: await bob.signMessage({ message: fake }) }), 400, /nonce/);
+    // The untouched message still works once.
+    expect((await svc.optIn({ message, signature })).wallet).toBe(B);
   });
 });

@@ -258,6 +258,16 @@ export async function loadEvidenceFacts(db: Db, opts: { asOf: number; earlyBuyCo
   return [...byWallet.values()].sort((a, b) => (a.wallet < b.wallet ? -1 : a.wallet > b.wallet ? 1 : 0));
 }
 
+/** The policy a launch's creator signed and locked, if any. */
+export async function loadPolicyLock(db: Db, launchId: string): Promise<{ policyHash: string; policy: unknown; lockedAt: number } | undefined> {
+  const [row] = await db.query<{ policy_hash: string; policy: unknown; locked_at: string }>(
+    `SELECT pl.policy_hash, p.policy, pl.locked_at FROM policy_locks pl JOIN policies p ON p.hash = pl.policy_hash WHERE pl.launch_id = $1`,
+    [launchId],
+  );
+  if (!row) return undefined;
+  return { policyHash: row.policy_hash, policy: typeof row.policy === 'string' ? JSON.parse(row.policy) : row.policy, lockedAt: num(row.locked_at) };
+}
+
 /** Latest snapshot of `token` taken at or before `asOf`. */
 export async function latestSnapshotId(db: Db, token: Address, asOf: number): Promise<string | undefined> {
   const [row] = await db.query<{ id: string }>(
