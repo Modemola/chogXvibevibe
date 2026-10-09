@@ -1,10 +1,10 @@
 import { type Address, TEMPLATES, resolveAllocation } from '@scout/core';
-import { ScoutDrop, TestToken } from '@scout/contracts';
+import { BURN_SINK, ScoutDrop, TestToken, claimBatches, createDropArgs } from '@scout/contracts';
 import { localChain } from '@scout/contracts/testing';
 import { createPgliteDb, listProfileWallets, loadWalletFacts, migrate, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { describe, expect, it } from 'vitest';
-import { runShowcaseDrop } from '../src/testnet.js';
+import { pushClaims, runShowcaseDrop } from '../src/testnet.js';
 
 const E18 = 10n ** 18n;
 
@@ -37,6 +37,32 @@ describe('runShowcaseDrop', () => {
       expect([claimed, balance]).toEqual([true, rec.amount]);
     }
     expect(lines.at(-1)).toBe(`Claimed ${set.recipients.length}/${set.recipients.length}`);
+
+    // A second drop where one recipient claims for themselves before the keeper's batch:
+    // the keeper skips them instead of reverting the whole batch.
+    await wallet.writeContract({ address: r.token, abi: TestToken.abi, functionName: 'approve', args: [r.scoutDrop, set.allocated] });
+    const created = await wallet.writeContract({
+      address: r.scoutDrop,
+      abi: ScoutDrop.abi,
+      functionName: 'createDrop',
+      args: [...createDropArgs(set, { token: r.token, sink: BURN_SINK })],
+    });
+    await c.pub.waitForTransactionReceipt({ hash: created });
+    const [first] = claimBatches(set, 20);
+    const self = await wallet.writeContract({
+      address: r.scoutDrop,
+      abi: ScoutDrop.abi,
+      functionName: 'claim',
+      args: [2n, first!.accounts[3]!, first!.amounts[3]!, first!.proofs[3]!],
+    });
+    await c.pub.waitForTransactionReceipt({ hash: self });
+    const pushed = await pushClaims({ pub: c.pub, wallet, scoutDrop: r.scoutDrop, dropId: 2n, set, batchSize: 20 });
+    expect(pushed.claimed).toBe(set.recipients.length);
+    for (const rec of set.recipients) {
+      expect(await c.pub.readContract({ address: r.scoutDrop, abi: ScoutDrop.abi, functionName: 'hasClaimed', args: [2n, rec.wallet] })).toBe(true);
+    }
+    // Re-running sends nothing.
+    expect((await pushClaims({ pub: c.pub, wallet, scoutDrop: r.scoutDrop, dropId: 2n, set, batchSize: 20 })).txs).toEqual([]);
     await db.close();
-  }, 180_000);
+  }, 240_000);
 });

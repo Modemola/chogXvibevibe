@@ -89,21 +89,24 @@ export async function runShowcaseDrop(opts: {
   const approved = await send(txs.approve);
   fromBlock ??= approved.blockNumber;
 
-  txs.createDrop = await wallet.writeContract({ address: scoutDrop, abi: ScoutDrop.abi, functionName: 'createDrop', args: [...createDropArgs(set, { token, sink: BURN_SINK })] });
+  // Dry-run first: a token that taxes or blocks the deposit fails here with its reason, before any gas is spent.
+  const { request } = await pub.simulateContract({
+    account: wallet.account,
+    address: scoutDrop,
+    abi: ScoutDrop.abi,
+    functionName: 'createDrop',
+    args: [...createDropArgs(set, { token, sink: BURN_SINK })],
+  });
+  txs.createDrop = await wallet.writeContract(request);
   const created = await send(txs.createDrop);
   const [event] = parseEventLogs({ abi: ScoutDrop.abi, logs: created.logs, eventName: 'DropCreated' });
   if (!event) throw new Error('createDrop emitted no DropCreated event');
   const dropId = (event.args as { dropId: bigint }).dropId;
   log(`Drop #${dropId} created for ${set.recipients.length} recipients`);
 
-  let claimed = 0;
-  for (const b of claimBatches(set, opts.batchSize ?? 50)) {
-    const hash = await wallet.writeContract({ address: scoutDrop, abi: ScoutDrop.abi, functionName: 'claimMany', args: [dropId, b.accounts, b.amounts, b.proofs] });
-    await send(hash);
-    txs.claims.push(hash);
-    claimed += b.accounts.length;
-    log(`Claimed ${claimed}/${set.recipients.length}`);
-  }
+  const pushed = await pushClaims({ pub, wallet, scoutDrop, dropId, set, batchSize: opts.batchSize ?? 50, log });
+  txs.claims.push(...pushed.txs);
+  const claimed = pushed.claimed;
 
   const chainId = await pub.getChainId();
   return {
@@ -138,4 +141,44 @@ export async function transfersOpen(pub: PublicClient, token: Address, from: Add
   } catch {
     return false;
   }
+}
+
+/**
+ * Pushes every claim of a drop as a keeper. claimMany is all-or-nothing, so recipients who
+ * already claimed for themselves are left out of each batch; otherwise one early self-claim
+ * would revert a whole batch. Safe to re-run: it only sends what is still unclaimed.
+ */
+export async function pushClaims(opts: {
+  pub: PublicClient;
+  wallet: Wallet;
+  scoutDrop: Address;
+  dropId: bigint;
+  set: AllocationSet;
+  batchSize?: number;
+  log?: (line: string) => void;
+}): Promise<{ txs: Hex[]; claimed: number }> {
+  const { pub, wallet, scoutDrop, dropId, set } = opts;
+  const txs: Hex[] = [];
+  let claimed = 0;
+  for (const b of claimBatches(set, opts.batchSize ?? 50)) {
+    const done = await Promise.all(
+      b.accounts.map((a) => pub.readContract({ address: scoutDrop, abi: ScoutDrop.abi, functionName: 'hasClaimed', args: [dropId, a] })),
+    );
+    const keep = b.accounts.map((_, i) => i).filter((i) => !done[i]);
+    claimed += b.accounts.length - keep.length;
+    if (keep.length) {
+      const hash = await wallet.writeContract({
+        address: scoutDrop,
+        abi: ScoutDrop.abi,
+        functionName: 'claimMany',
+        args: [dropId, keep.map((i) => b.accounts[i]!), keep.map((i) => b.amounts[i]!), keep.map((i) => b.proofs[i]!)],
+      });
+      const receipt = await pub.waitForTransactionReceipt({ hash });
+      if (receipt.status !== 'success') throw new Error(`Transaction ${hash} reverted`);
+      txs.push(hash);
+      claimed += keep.length;
+    }
+    opts.log?.(`Claimed ${claimed}/${set.recipients.length}`);
+  }
+  return { txs, claimed };
 }
