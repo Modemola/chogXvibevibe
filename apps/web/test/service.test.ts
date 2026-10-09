@@ -1,4 +1,4 @@
-import { TEMPLATES, buildMessage, normalizeAddress } from '@scout/core';
+import { TEMPLATES, TEMPLATE_IDS, buildMessage, merkleRoot, normalizeAddress, verifyClaim } from '@scout/core';
 import { type Db, createPgliteDb, migrate, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
@@ -182,6 +182,45 @@ describe('ScoutService', () => {
       409,
       /alts of its own/,
     );
+  });
+
+  it('builder, saved policy and exports agree with each other and with the engine', async () => {
+    const custom = { ...TEMPLATES.custom.policy, caps: { perWalletBps: 100, perClusterBps: 150 }, minScore: 0.05 };
+    const launch = { lane: 'utility', pairClass: 'stock', creator: '0x000000000000000000000000000000000000dEaD' } as const;
+    for (const policy of [...TEMPLATE_IDS.map((t) => TEMPLATES[t].policy), custom]) {
+      const preview = await svc.preview({ policy, launch, sliceTokens: '1000000', topN: 5 });
+      const { hash } = await svc.savePolicy(policy);
+      expect(hash).toBe(preview.policyHash);
+      const claims = (await svc.exportClaims({ policy, launch, sliceTokens: '1000000' })) as {
+        merkleRoot: string;
+        allocated: string;
+        recipients: { wallet: `0x${string}`; amount: string; proof: string[] }[];
+      };
+      expect(claims.merkleRoot).toBe(preview.merkleRoot);
+      expect(claims.recipients.length).toBe(preview.totalRecipients);
+      expect(claims.recipients.reduce((s, r) => s + BigInt(r.amount), 0n)).toBe(BigInt(claims.allocated));
+      for (const r of claims.recipients) expect(verifyClaim(claims.merkleRoot, { wallet: r.wallet, amount: BigInt(r.amount) }, r.proof)).toBe(true);
+      expect(merkleRoot(claims.recipients.map((r) => ({ wallet: r.wallet, amount: BigInt(r.amount) })))).toBe(claims.merkleRoot);
+      const csv = (await svc.exportCsv({ policy, launch, sliceTokens: '1000000' })).trim().split('\n');
+      expect(csv.length - 1).toBe(claims.recipients.length);
+    }
+  });
+
+  it("shows each wallet the same score on its profile as in a payout", async () => {
+    const set = await svc.resolve({ policy: TEMPLATES.hold_or_die.policy, launch: { lane: 'meme' as const, pairClass: 'eth' as const, creator: '0x000000000000000000000000000000000000dEaD' }, sliceTokens: '1000000' });
+    expect(set.recipients.length).toBeGreaterThan(5);
+    for (const r of set.recipients.slice(0, 8)) {
+      const p = await svc.profile(r.wallet, { template: 'hold_or_die', lane: 'meme', pairClass: 'eth', asOf: set.asOf });
+      expect(p.score).toBeCloseTo(r.score, 12);
+    }
+  });
+
+  it('previews a graduated launch as of its graduation, like the keeper', async () => {
+    const [row] = await db.query<{ id: string; graduated_at: string }>(
+      'SELECT id, graduated_at FROM launches WHERE graduated_at IS NOT NULL ORDER BY graduated_at DESC LIMIT 1',
+    );
+    const set = await svc.resolve({ policy: TEMPLATES.custom.policy, launch: { launchId: row!.id }, sliceTokens: '1000' });
+    expect(set.asOf).toBe(Number(row!.graduated_at));
   });
 
   it('refuses to lock a policy once the launch has graduated', async () => {

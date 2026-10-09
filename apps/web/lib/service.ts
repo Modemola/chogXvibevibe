@@ -337,6 +337,14 @@ export class ScoutService {
 
   // --- Policies -------------------------------------------------------------------
 
+  /** A graduated launch is previewed as of its graduation, the moment the keeper resolves its drop. */
+  private async graduationOf(spec: LaunchSpec): Promise<number | undefined> {
+    if (!('launchId' in spec)) return undefined;
+    const [row] = await this.db.query<{ graduated_at: string | null }>('SELECT graduated_at FROM launches WHERE id = $1', [spec.launchId]);
+    const at = row?.graduated_at ? Number(row.graduated_at) : undefined;
+    return at !== undefined && at <= this.now() ? at : undefined;
+  }
+
   private async launchContext(spec: LaunchSpec, asOf: number): Promise<LaunchContext> {
     if ('launchId' in spec) {
       const ctx = await loadLaunchContext(this.db, spec.launchId, asOf);
@@ -353,7 +361,7 @@ export class ScoutService {
   }
 
   async resolve(input: { policy: unknown; launch: LaunchSpec; sliceTokens: string | number; asOf?: number }): Promise<AllocationSet> {
-    const asOf = input.asOf ?? this.asOf();
+    const asOf = input.asOf ?? (await this.graduationOf(input.launch)) ?? this.asOf();
     const launch = await this.launchContext(input.launch, asOf);
     const slice = parseSlice(input.sliceTokens);
     const pop = await this.population(asOf);
