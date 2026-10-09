@@ -16,6 +16,7 @@ pnpm studio                                # preview in the browser
 node scripts/render.mjs Film out/graduation-scout-film.mp4
 node scripts/render.mjs Teaser out/graduation-scout-teaser.mp4           # 16:9; TeaserVertical for 9:16
 node scripts/still.mjs Film out/stills 7 30 50   # stills at given seconds
+node scripts/logo.mjs out/logo                   # $SCOUT token logo, 1024 and 512 px, with and without the orbit
 ```
 
 Rendering uses Playwright's headless Chromium with SwiftShader (`gl: 'swangle'`), so it runs on machines without a
