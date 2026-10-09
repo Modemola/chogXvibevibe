@@ -1,7 +1,7 @@
 import { Featured, FinalCta, Formula, Hero, Pillars, Proof, StatsBand } from '@/components/home';
-import { OnchainProof } from '@/components/onchain';
+import { OnchainProof, ScoutTokenPanel } from '@/components/onchain';
 import { Sieve } from '@/components/sieve';
-import { onchainDrop } from '@/lib/onchain';
+import { onchainDrop, scoutToken, scoutTokenDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,7 @@ export default async function Home() {
       <Formula />
       <Proof />
       {onchainDrop && <OnchainProof drop={onchainDrop} />}
+      <ScoutTokenPanel token={scoutToken} drop={scoutTokenDrop} />
       {featured && (
         <Featured
           data={{

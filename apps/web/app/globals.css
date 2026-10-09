@@ -610,3 +610,7 @@ footer.site .mark { font: italic 400 clamp(64px, 14vw, 210px)/0.8 var(--serif); 
 .onchain-txs { gap: 0 !important; }
 .onchain-txs .row { padding: 9px 0; border-top: 1px solid var(--hair); gap: 14px; }
 .onchain-badge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 22px; }
+.scout-token-logo { display: block; border-radius: 50%; box-shadow: 0 0 0 1px var(--hair), 0 18px 60px rgba(0, 0, 0, 0.5); }
+.scout-token-name { font: 400 clamp(30px, 3vw, 40px)/1.1 var(--serif); letter-spacing: -0.01em; }
+.scout-token-name .faint { font-size: 0.55em; margin-left: 6px; }
+@media (max-width: 900px) { .scout-token-card { order: 2; } }

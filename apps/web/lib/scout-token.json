@@ -1,0 +1,15 @@
+{
+  "symbol": "SCOUT",
+  "name": "Graduation Scout",
+  "address": "0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de",
+  "chainId": 46630,
+  "chainName": "Robinhood Chain Testnet",
+  "explorer": "https://explorer.testnet.chain.robinhood.com",
+  "launchNumber": 8422,
+  "launchTx": "0xfbf9c00b6a50ca6c8efbcb886d9f9433e51465ec175a73dbcfe1b11ec1813843",
+  "supply": "1000000000000000000000000000",
+  "graduatesAtEth": 4,
+  "dropWallet": "0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185",
+  "reserved": "10000000000000000000000000",
+  "scoutDrop": "0xb78c43e7df50a30d93f33b24de3554c9c286aa13"
+}

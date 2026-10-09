@@ -3,7 +3,7 @@
 import { TEMPLATES, type TemplateId } from '@scout/core';
 import Link from 'next/link';
 import { short, tokens } from '@/lib/format';
-import { type OnchainDrop, explorerAddress, explorerTx } from '@/lib/onchain';
+import { type OnchainDrop, type ScoutToken, explorerAddress, explorerTx } from '@/lib/onchain';
 import { Item, Reveal, Stagger, Words } from './motion';
 
 const templateName = (id: string) => TEMPLATES[id as TemplateId]?.name ?? id;
@@ -112,5 +112,72 @@ export function OnchainBadge({ drop }: { drop: OnchainDrop }) {
       recipients claimed.{' '}
       <Ext href={explorerAddress(drop, drop.scoutDrop)}>View the contract</Ext>
     </div>
+  );
+}
+
+/** $SCOUT: the project's own token on vibe/vibe, with its Scout drop waiting for graduation (or paid, once it has run). */
+export function ScoutTokenPanel({ token, drop }: { token: ScoutToken; drop: OnchainDrop | null }) {
+  return (
+    <section className="section">
+      <div className="split proof">
+        <Reveal className="scout-token-card">
+          <div className="glass pad r-xl scout-token">
+            <img src="/scout-logo.png" alt="$SCOUT logo" width={112} height={112} className="scout-token-logo" />
+            <div className="tiny faint mono" style={{ margin: '18px 0 6px' }}>
+              VIBE/VIBE LAUNCH #{token.launchNumber} · {token.chainName.toUpperCase()}
+            </div>
+            <div className="scout-token-name">
+              ${token.symbol} <span className="faint">{token.name}</span>
+            </div>
+            <dl className="onchain-facts" style={{ marginTop: 20 }}>
+              <dt>Contract</dt>
+              <dd>
+                <Ext href={explorerAddress(token, token.address)}>{short(token.address)}</Ext>
+              </dd>
+              <dt>Supply</dt>
+              <dd className="mono">{tokens(token.supply, 0)}</dd>
+              <dt>Graduates at</dt>
+              <dd className="mono">{token.graduatesAtEth} ETH</dd>
+              <dt>Held for the drop</dt>
+              <dd>
+                <Ext href={explorerAddress(token, token.dropWallet)}>{tokens(token.reserved, 0)}</Ext>
+              </dd>
+              <dt>Paid by</dt>
+              <dd>
+                <Ext href={explorerAddress(token, token.scoutDrop)}>ScoutDrop {short(token.scoutDrop)}</Ext>
+              </dd>
+            </dl>
+          </div>
+        </Reveal>
+        <div>
+          <Reveal>
+            <div className="kicker">
+              <span className="live-dot" /> Our own token
+            </div>
+          </Reveal>
+          <Words as="h2" className="display" text={drop ? '*$SCOUT* graduated. Scout paid it out.' : '*$SCOUT* drops the moment it graduates.'} />
+          <Reveal delay={0.15}>
+            {drop ? (
+              <p className="lead">
+                $SCOUT is live on vibe/vibe. When it graduated, Scout resolved <b>{templateName(drop.template)}</b> and ScoutDrop paid{' '}
+                <b>{tokens(drop.total, 0)} SCOUT</b> to {drop.claimed} of {drop.recipients} scored wallets in drop #{drop.dropId}.{' '}
+                <Ext href={explorerTx(drop, drop.txs.createDrop)}>See the drop</Ext>
+              </p>
+            ) : (
+              <p className="lead">
+                We launched $SCOUT on vibe/vibe like any creator would. vibe/vibe locks transfers until a token graduates, so its airdrop
+                can&apos;t run early. {tokens(token.reserved, 0)} SCOUT sits in the drop wallet now. When $SCOUT reaches {token.graduatesAtEth}{' '}
+                ETH, Scout resolves the policy and the same ScoutDrop contract pays the wallets that stay.
+              </p>
+            )}
+          </Reveal>
+          <Reveal delay={0.25}>
+            <div className="tiny faint mono" style={{ marginTop: 20 }}>
+              Testnet token. Recipients are scored from Scout&apos;s simulated world; not affiliated with vibe/vibe.
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
   );
 }

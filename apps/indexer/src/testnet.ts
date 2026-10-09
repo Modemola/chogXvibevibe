@@ -1,6 +1,6 @@
 import type { Address, AllocationSet } from '@scout/core';
 import { BURN_SINK, ScoutDrop, TestToken, claimBatches, createDropArgs } from '@scout/contracts';
-import { type Account, type Chain, type Hex, type PublicClient, type Transport, type WalletClient, defineChain, parseEventLogs } from 'viem';
+import { type Account, type Chain, type Hex, type PublicClient, type Transport, type WalletClient, defineChain, encodeFunctionData, erc20Abi, parseEventLogs } from 'viem';
 
 /** Robinhood Chain testnet. */
 export const robinhoodTestnet = defineChain({
@@ -79,6 +79,12 @@ export async function runShowcaseDrop(opts: {
     log(`Demo token deployed at ${token}`);
   }
 
+  const balance = await pub.readContract({ address: token, abi: erc20Abi, functionName: 'balanceOf', args: [wallet.account.address] });
+  if (balance < set.allocated) throw new Error(`Deployer holds ${balance} of ${token}, the drop needs ${set.allocated}`);
+  if (!(await transfersOpen(pub, token, wallet.account.address, scoutDrop))) {
+    throw new Error(`${token} refuses transfers (a vibe/vibe token before graduation locks them); nothing was sent`);
+  }
+
   txs.approve = await wallet.writeContract({ address: token, abi: TestToken.abi, functionName: 'approve', args: [scoutDrop, set.allocated] });
   const approved = await send(txs.approve);
   fromBlock ??= approved.blockNumber;
@@ -119,4 +125,17 @@ export async function runShowcaseDrop(opts: {
     fromBlock: fromBlock.toString(),
     createdAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Whether `token` lets `from` move tokens to `to` right now. vibe/vibe tokens revert with
+ * TransfersLocked() until they graduate; a gas estimate of a 1-wei transfer shows it for free.
+ */
+export async function transfersOpen(pub: PublicClient, token: Address, from: Address, to: Address): Promise<boolean> {
+  try {
+    await pub.estimateGas({ account: from, to: token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [to, 1n] }) });
+    return true;
+  } catch {
+    return false;
+  }
 }

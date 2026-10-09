@@ -13,6 +13,7 @@ import {
   type TemplateId,
   allocationToCsv,
   normalizeAddress,
+  type Address,
   resolveAllocation,
 } from '@scout/core';
 import {
@@ -29,12 +30,12 @@ import {
   writeBatch,
 } from '@scout/db';
 import { BURN_SINK, createDropArgs, claimBatches } from '@scout/contracts';
-import { http, createPublicClient, createWalletClient } from 'viem';
+import { http, createPublicClient, createWalletClient, erc20Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { SPARK_BASE, createBaseClient, createRpcClient, simulateWorld, snapshotErc20 } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
 import { ingestScoutDrops } from './onchain.js';
-import { robinhoodTestnet, runShowcaseDrop } from './testnet.js';
+import { robinhoodTestnet, runShowcaseDrop, transfersOpen } from './testnet.js';
 
 const USAGE = `scout <command> [options]
 
@@ -62,6 +63,9 @@ Commands
                                         them), fund the drop, push every claim. Needs DEPLOYER_PRIVATE_KEY in the
                                         environment. Defaults to the most recently graduated launch
                                         that has no Scout drop yet.
+  token-status --rpc URL --token 0x.. [--holder 0x..]
+                                        Name, supply, the holder's balance, and whether transfers are open
+                                        (vibe/vibe locks them until graduation). Exits 2 while locked.
   evaluate  [--template T] [--ignore-hubs 20] [--as-of T]
                                         Score simulated profiles against ground truth
 
@@ -94,6 +98,7 @@ const { positionals, values } = parseArgs({
     'drop-out': { type: 'string' },
     contract: { type: 'string' },
     scoutdrop: { type: 'string' },
+    holder: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -369,6 +374,29 @@ async function main() {
         console.log(`Wrote ${out}`);
         if (result.explorer) console.log(`ScoutDrop: ${result.explorer}/address/${result.scoutDrop}`);
         console.log(`Index it with: pnpm scout ingest-drops --rpc ${values.rpc} --contract ${result.scoutDrop} --from-block ${result.fromBlock}`);
+        break;
+      }
+
+      case 'token-status': {
+        if (!values.rpc || !values.token) throw new Error('--rpc and --token are required');
+        const pub = createPublicClient({ transport: http(values.rpc, { timeout: 60_000 }) });
+        const token = normalizeAddress(values.token);
+        const key = process.env.DEPLOYER_PRIVATE_KEY as `0x${string}` | undefined;
+        const holder = values.holder ? normalizeAddress(values.holder) : key ? (privateKeyToAccount(key).address.toLowerCase() as Address) : undefined;
+        if (!holder) throw new Error('--holder or DEPLOYER_PRIVATE_KEY is required');
+        const read = <T,>(functionName: 'name' | 'symbol' | 'totalSupply', args: [] = []) =>
+          pub.readContract({ address: token, abi: erc20Abi, functionName, args }) as Promise<T>;
+        const [name, symbol, supply, balance] = await Promise.all([
+          read<string>('name'),
+          read<string>('symbol'),
+          read<bigint>('totalSupply'),
+          pub.readContract({ address: token, abi: erc20Abi, functionName: 'balanceOf', args: [holder] }),
+        ]);
+        const open = await transfersOpen(pub, token, holder, '0x000000000000000000000000000000000000beef');
+        console.log(`${name} ($${symbol}) ${token}`);
+        console.log(`  supply ${Number(supply / E18).toLocaleString('en-US')}, ${holder} holds ${Number(balance / E18).toLocaleString('en-US')}`);
+        console.log(`  transfers ${open ? 'OPEN' : 'LOCKED'}`);
+        if (!open) process.exitCode = 2;
         break;
       }
 

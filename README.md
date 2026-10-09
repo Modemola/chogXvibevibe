@@ -212,6 +212,31 @@ Robinhood Chain testnet is chain 46630 (explorer: https://explorer.testnet.chain
 the Hold or Die template and the most recently graduated launch without a Scout drop. Use a throwaway key with testnet
 ETH only; a run with ~180 recipients needs roughly 16M gas in total.
 
+### $SCOUT, our own token
+
+Graduation Scout has its own token, launched on vibe/vibe testnet like any creator's:
+**$SCOUT** (Graduation Scout) at `0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de`, launch #8422, 1,000,000,000 supply,
+graduating at 4 ETH. The drop wallet bought 10,000,000 SCOUT at launch to fund its Scout drop.
+
+vibe/vibe locks transfers (`TransfersLocked()`) until a token graduates, so the drop cannot be funded before then.
+`showcase-drop` checks this first and stops without sending anything. Check the token at any time with:
+
+```bash
+pnpm scout token-status --rpc https://rpc.testnet.chain.robinhood.com --token 0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de
+# exits 2 while transfers are locked
+```
+
+Once transfers open, the drop runs on the existing ScoutDrop and is written to `apps/web/lib/scout-drop.json`, which
+switches the home page's $SCOUT panel from "waiting for graduation" to the paid-out drop:
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x… pnpm scout showcase-drop --rpc https://rpc.testnet.chain.robinhood.com \
+  --scoutdrop 0xb78c43e7df50a30d93f33b24de3554c9c286aa13 --token 0x0a272e5ee3f48c668ccf30e65e7738099ae0a1de \
+  --slice 10000000 --out "$PWD/apps/web/lib/scout-drop.json"
+```
+
+The token details on the site come from `apps/web/lib/scout-token.json`.
+
 ## Scoring model
 
 For wallet `w` and launch `L`:
