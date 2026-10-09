@@ -1,3 +1,4 @@
 node_modules/
 out/
 public/score.wav
+public/pulse-*.wav
