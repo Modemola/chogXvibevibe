@@ -74,7 +74,8 @@ describe('resolveAllocation', () => {
     const set = resolveAllocation(input());
     checkInvariants(set, 50, 80);
     expect(set.unallocated).toBeGreaterThan(0n);
-    expect(set.warnings.some((w) => w.startsWith('UNALLOCATED'))).toBe(true);
+    const warning = set.warnings.find((w) => w.startsWith('UNALLOCATED'));
+    expect(warning).toMatch(/^UNALLOCATED: [\d,.]+ tokens \(/); // whole tokens, not raw base units
   });
 
   it('is deterministic regardless of input order', () => {
