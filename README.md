@@ -148,6 +148,26 @@ The staggered farm evades clustering but still gets nothing, because it dumps ev
 The simulator is not calibrated to real vibe/vibe data; it's a world containing the behaviours Scout has to tell apart.
 The end-to-end test (`apps/indexer/test/pipeline.test.ts`) locks these properties in.
 
+### At every graduation
+
+The table above is measured at the end of the season. Drops are resolved at each launch's graduation, when fewer
+people have signed up and farms have less history, so every template is also resolved at all 43 simulated graduations:
+
+| Template | Launches where a farm wallet is paid | Share of all tokens to farms |
+|---|---|---|
+| Hold or Die | 11 of 43 | 0.46% |
+| Custom | 11 of 43 | 0.44% |
+| Builder Lane | 11 of 43 | 0.77% |
+| Stock Pair Natives | 11 of 43 | 0.94% |
+| SPARK Core | 14 of 43 | 1.75% |
+
+No honest wallet carries a sybil penalty at any of the 43 graduations. The farm wallets that still get paid have made
+fewer than three buys and share no funder with each other: there is nothing yet to link them by, so they look like any
+newcomer. Sybil links use every indexed wallet's public funding and early buys as evidence, not only signed-up
+profiles, so a farm is caught even when only one of its wallets has signed up; wallets that never opted in are never
+scored or paid. `apps/indexer/test/templates.test.ts` checks each template at early, middle and late graduations
+against hand-written versions of its rules.
+
 ## Aftermath
 
 After a drop, `scout aftermath` measures what every recipient did, from token `Transfer`s alone, at 1h, 24h, 7d and 30d.
@@ -251,7 +271,7 @@ S(w, L) = αH + βQ + γA − δD − εY
 | **Q** market quality | Do they trade substance, and does it fit this launch? | 0..1 | Lane mix (utility/RWA/vibecoded > art > meme, stock-pair bonus) + affinity with `L`'s lane and pair class |
 | **A** alignment | Are they part of the ecosystem? | −1..1 | SPARK tier, charged Viber + level, guild standing, shipped products; a flagged rug subtracts |
 | **D** dump score | Do they sell airdrops fast? | 0..1 | Per drop: 1h sell dominates, then 24h, then 7d. Recency-decayed with a clean-history pseudo-count, so one sin fades and repeated dumping doesn't |
-| **Y** sybil | Are they one of many wallets run by the same person? | 0..1 | Undeclared cluster size (same funder within 30 min, funded by another profile, identical early-buy sequences) |
+| **Y** sybil | Are they one of many wallets run by the same person? | 0..1 | Undeclared cluster size (same funder within 30 min, funded by another profile, identical early-buy sequences of 3+ buys), with every indexed wallet as evidence |
 
 Every number in the model is in [`packages/core/src/config.ts`](packages/core/src/config.ts) and versioned.
 Each allocation records the scoring version, config hash and policy hash, so anyone can re-derive it.

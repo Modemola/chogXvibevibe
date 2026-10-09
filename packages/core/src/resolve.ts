@@ -18,6 +18,11 @@ export interface ResolveInput {
   slice: bigint;
   /** Opted-in Scout profiles. */
   wallets: readonly WalletFacts[];
+  /**
+   * Every other indexed wallet (not opted in), used only as sybil evidence: their public
+   * funding and early buys can link opted-in wallets. Never scored or paid.
+   */
+  evidence?: readonly WalletFacts[];
   /** The creator's own facts, if known. Improves creator-cluster detection. */
   creatorFacts?: WalletFacts;
   config?: ScoringConfig;
@@ -112,7 +117,7 @@ export function resolveAllocation(input: ResolveInput): AllocationSet {
     : (facts.get(launch.creator) ?? emptyFacts(launch.creator));
   if (creatorFacts.wallet !== launch.creator) throw new Error('creatorFacts.wallet must equal launch.creator');
 
-  const clusters = clusterWallets([...facts.values(), ...(facts.has(launch.creator) ? [] : [creatorFacts])], config);
+  const clusters = clusterWallets([...facts.values(), ...(facts.has(launch.creator) ? [] : [creatorFacts])], config, input.evidence);
   const creatorCluster = (clusters.get(launch.creator) ?? singletonCluster(launch.creator)).clusterId;
 
   // Score, then apply exclusions.

@@ -226,6 +226,38 @@ export async function listProfileWallets(db: Db, asOf: number): Promise<Address[
   return rows.map((r) => r.wallet as Address);
 }
 
+/**
+ * Sybil evidence: first funding and first buys of every indexed wallet that had not opted in
+ * by `asOf`. Only what clustering reads is loaded; everything else stays blank, because
+ * these wallets are never scored.
+ */
+export async function loadEvidenceFacts(db: Db, opts: { asOf: number; earlyBuyCount?: number }): Promise<WalletFacts[]> {
+  const asOf = opts.asOf;
+  const notOptedIn = 'NOT EXISTS (SELECT 1 FROM profiles p WHERE p.wallet = x.wallet AND p.opted_in_at <= $1)';
+  const byWallet = new Map<string, WalletFacts>();
+  const get = (w: string) => {
+    let f = byWallet.get(w);
+    if (!f) byWallet.set(w, (f = blankFacts(w as Address)));
+    return f;
+  };
+  const funding = await db.query<{ wallet: string; funder: string; ts: string }>(
+    `SELECT x.wallet, x.funder, x.ts FROM wallet_funding x WHERE x.ts <= $1 AND ${notOptedIn}`,
+    [asOf],
+  );
+  for (const r of funding) get(r.wallet).firstFunding = { funder: r.funder as Address, at: num(r.ts) };
+  // Same order and count as loadWalletFacts, so a wallet's early buys look the same either way.
+  const buys = await db.query<{ wallet: string; launch_id: string; ts: string }>(
+    `SELECT wallet, launch_id, ts FROM (
+       SELECT x.wallet, x.launch_id, x.ts,
+              row_number() OVER (PARTITION BY x.wallet ORDER BY x.ts, x.tx_hash, x.log_index) AS n
+         FROM trades x WHERE x.side = 'buy' AND x.ts <= $1 AND ${notOptedIn}
+     ) b WHERE n <= $2 ORDER BY wallet, n`,
+    [asOf, opts.earlyBuyCount ?? 10],
+  );
+  for (const r of buys) get(r.wallet).earlyBuys.push({ launchId: r.launch_id, at: num(r.ts) });
+  return [...byWallet.values()].sort((a, b) => (a.wallet < b.wallet ? -1 : a.wallet > b.wallet ? 1 : 0));
+}
+
 /** Latest snapshot of `token` taken at or before `asOf`. */
 export async function latestSnapshotId(db: Db, token: Address, asOf: number): Promise<string | undefined> {
   const [row] = await db.query<{ id: string }>(

@@ -23,6 +23,7 @@ import {
   listProfileWallets,
   loadLaunchContext,
   loadSimLabels,
+  loadEvidenceFacts,
   loadWalletFacts,
   migrate,
   openDb,
@@ -158,12 +159,14 @@ async function resolveFromArgs(db: Db, launchId: string | undefined) {
   const snapshot = await sparkSnapshotFor(db, asOf);
   const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: snapshot });
   const [creatorFacts] = await loadWalletFacts(db, { wallets: [launch.creator], asOf, sparkSnapshotId: snapshot });
+  const evidence = await loadEvidenceFacts(db, { asOf });
   const template = templateArg();
   const set = resolveAllocation({
     policy: TEMPLATES[template].policy,
     launch,
     slice: BigInt(values.slice ?? '1000000') * E18,
     wallets: facts,
+    evidence,
     creatorFacts,
     config,
   });
@@ -320,6 +323,7 @@ async function main() {
         const facts = await loadWalletFacts(db, { wallets, asOf, sparkSnapshotId: await sparkSnapshotFor(db, asOf) });
         const report = evaluate({
           facts,
+          evidence: await loadEvidenceFacts(db, { asOf }),
           labels,
           launch: { launchId: 'eval', lane: 'utility', pairClass: 'stock', creator: normalizeAddress('0x000000000000000000000000000000000000dead'), asOf },
           template: templateArg(),

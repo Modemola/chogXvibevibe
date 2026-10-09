@@ -34,6 +34,7 @@ import {
   type Db,
   hubFunders,
   latestSnapshotId,
+  loadEvidenceFacts,
   listProfileWallets,
   loadLaunchAftermath,
   loadLaunchContext,
@@ -73,6 +74,8 @@ interface Population {
   snapshotId?: string;
   wallets: Address[];
   facts: Map<Address, WalletFacts>;
+  /** Every other indexed wallet's funding and early buys: sybil evidence only. */
+  evidence: WalletFacts[];
 }
 
 const E18 = 10n ** 18n;
@@ -115,8 +118,11 @@ export class ScoutService {
     const config = await this.config();
     const snapshotId = await this.snapshotFor(asOf);
     const wallets = await listProfileWallets(this.db, asOf);
-    const facts = await loadWalletFacts(this.db, { wallets, asOf, sparkSnapshotId: snapshotId });
-    return { asOf, config, snapshotId, wallets, facts: new Map(facts.map((f) => [f.wallet, f])) };
+    const [facts, evidence] = await Promise.all([
+      loadWalletFacts(this.db, { wallets, asOf, sparkSnapshotId: snapshotId }),
+      loadEvidenceFacts(this.db, { asOf }),
+    ]);
+    return { asOf, config, snapshotId, wallets, facts: new Map(facts.map((f) => [f.wallet, f])), evidence };
   }
 
   private async config(): Promise<ScoringConfig> {
@@ -280,7 +286,7 @@ export class ScoutService {
       ? [pop.facts.get(wallet)!]
       : await loadWalletFacts(this.db, { wallets: [wallet], asOf, sparkSnapshotId: pop.snapshotId });
     const everyone = optedIn ? [...pop.facts.values()] : [...pop.facts.values(), facts!];
-    const clusters = clusterWallets(everyone, pop.config);
+    const clusters = clusterWallets(everyone, pop.config, pop.evidence);
     const cluster = clusters.get(wallet) ?? singletonCluster(wallet);
     const weights = resolveWeights(template, undefined);
     const scored = scoreWallet(facts!, launch, cluster, weights, pop.config);
@@ -358,6 +364,7 @@ export class ScoutService {
         launch,
         slice,
         wallets: [...pop.facts.values()],
+        evidence: pop.evidence,
         creatorFacts,
         config: pop.config,
       });

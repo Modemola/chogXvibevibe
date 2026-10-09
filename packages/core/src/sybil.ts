@@ -76,10 +76,16 @@ class UnionFind {
  *
  * Declared links merge caps but carry no penalty. Detected links do both,
  * except between wallets already declared as one person.
+ *
+ * `evidence` is every other indexed wallet (not opted in). Their public funding and early
+ * buys can link opted-in wallets into a cluster, so a farm is caught even when only one of
+ * its wallets has signed up. They are never scored or paid, and are not "wallets in the
+ * set" for funded_by: being funded by a friend who trades is not evidence of a farm.
  */
 export function clusterWallets(
   facts: readonly WalletFacts[],
   config: ScoringConfig,
+  evidence: readonly WalletFacts[] = [],
 ): Map<Address, ClusterInfo> {
   const cfg = config.sybil;
   const all = new UnionFind();
@@ -93,6 +99,14 @@ export function clusterWallets(
   for (const n of nodes) {
     all.add(n);
     detected.add(n);
+  }
+  const graph = [...facts];
+  const seen = new Set(nodes);
+  for (const e of evidence) {
+    const wallet = normalizeAddress(e.wallet);
+    if (seen.has(wallet)) continue;
+    seen.add(wallet);
+    graph.push(wallet === e.wallet ? e : { ...e, wallet });
   }
 
   const link = (a: Address, b: Address, kind: ClusterEdgeKind, detail: string) => {
@@ -115,11 +129,11 @@ export function clusterWallets(
 
   // Funding: same funder, close in time. Sort by time and chain neighbours.
   const byFunder = new Map<Address, { wallet: Address; at: number }[]>();
-  for (const f of facts) {
+  for (const f of graph) {
     if (!f.firstFunding) continue;
     const funder = normalizeAddress(f.firstFunding.funder);
     if (ignored.has(funder)) continue;
-    if (nodes.has(funder)) {
+    if (nodes.has(funder) && nodes.has(f.wallet)) {
       link(f.wallet, funder, 'funded_by', `first funded by ${funder}`);
     }
     const list = byFunder.get(funder) ?? [];
@@ -139,7 +153,7 @@ export function clusterWallets(
 
   // Early buys: block on the first three launches to avoid comparing everyone.
   const blocks = new Map<string, WalletFacts[]>();
-  for (const f of facts) {
+  for (const f of graph) {
     const buys = f.earlyBuys.slice(0, cfg.earlyBuyCount);
     if (buys.length < cfg.earlyBuyMin) continue;
     const key = buys

@@ -19,6 +19,8 @@ import {
  */
 export interface EvalInput {
   facts: WalletFacts[];
+  /** Indexed wallets that are not profiles: sybil evidence only. */
+  evidence?: WalletFacts[];
   labels: Map<Address, { persona: string; farmId?: string }>;
   launch: LaunchContext;
   template: TemplateId;
@@ -64,7 +66,7 @@ const median = (xs: number[]) => {
 
 export function evaluate(input: EvalInput): EvalReport {
   const { facts, labels, launch, config } = input;
-  const clusters = clusterWallets(facts, config);
+  const clusters = clusterWallets(facts, config, input.evidence);
   const weights = resolveWeights(input.template, undefined);
   const scores = new Map(
     facts.map((f) => [f.wallet, scoreWallet(f, launch, clusters.get(f.wallet) ?? singletonCluster(f.wallet), weights, config)]),
@@ -74,6 +76,7 @@ export function evaluate(input: EvalInput): EvalReport {
     launch,
     slice: input.slice,
     wallets: facts,
+    evidence: input.evidence,
     config,
   });
   const received = new Map(allocation.recipients.map((r) => [r.wallet, r.amount]));

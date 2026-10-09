@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SCORING_CONFIG as cfg, clusterWallets } from '../src/index.js';
-import { T0, addr, wallet } from './fixtures.js';
+import { DAY, T0, addr, wallet } from './fixtures.js';
 
 const FUNDER = addr(0xf00d);
 
@@ -17,6 +17,30 @@ describe('sybil clustering', () => {
 
     const pair = clusterWallets(farm.slice(0, 2), cfg);
     expect(pair.get(addr(1))!.sybilScore).toBeCloseTo(0.25);
+  });
+
+  it('uses wallets that never opted in as evidence: one signed-up farm wallet is still caught', () => {
+    const signedUp = wallet(1, { firstFunding: { funder: FUNDER, at: T0 } });
+    const siblings = [2, 3, 4, 5].map((i) => wallet(i, { firstFunding: { funder: FUNDER, at: T0 + i * 60 } }));
+    expect(clusterWallets([signedUp], cfg).get(addr(1))!.sybilScore).toBe(0);
+    const out = clusterWallets([signedUp], cfg, siblings);
+    expect(out.get(addr(1))!.detectedSize).toBe(5);
+    expect(out.get(addr(1))!.sybilScore).toBe(1);
+  });
+
+  it('identical early buys link a signed-up wallet to unsigned copies', () => {
+    const buys = [10, 11, 12].map((n) => ({ launchId: `L${n}`, at: T0 + n * 3_600 }));
+    const copy = (n: number, offset: number) => wallet(n, { earlyBuys: buys.map((b) => ({ ...b, at: b.at + offset })) });
+    const out = clusterWallets([copy(1, 0)], cfg, [copy(2, 20), copy(3, 45)]);
+    expect(out.get(addr(1))!.detectedSize).toBe(3);
+  });
+
+  it('being funded by an unsigned wallet, or funding one, is not evidence by itself', () => {
+    const friend = wallet(7, { firstFunding: { funder: addr(0xbeef), at: T0 } });
+    const me = wallet(1, { firstFunding: { funder: addr(7), at: T0 + DAY } });
+    expect(clusterWallets([me], cfg, [friend]).get(addr(1))!.sybilScore).toBe(0);
+    const funded = wallet(8, { firstFunding: { funder: addr(1), at: T0 } });
+    expect(clusterWallets([wallet(1)], cfg, [funded]).get(addr(1))!.sybilScore).toBe(0);
   });
 
   it('never links through ignored funders (CEX hot wallets)', () => {

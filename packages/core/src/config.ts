@@ -133,7 +133,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     fundingWindowSec: 30 * 60,
     ignoredFunders: [],
     earlyBuyCount: 10,
-    earlyBuyMin: 5,
+    earlyBuyMin: 3,
     earlyBuyWindowSec: 120,
     earlyBuyMatchRatio: 0.8,
     fullPenaltyClusterSize: 5,
