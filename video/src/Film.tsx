@@ -66,7 +66,7 @@ export function Teaser() {
         </div>
         <div style={{ opacity: ramp(t, 28.5, 29.1) }}>
           <Kicker size={34 * u} color={C.ink} style={{ letterSpacing: '0.06em', textTransform: 'none' }}>
-            vibevibe-gules.vercel.app
+            graduation-scout.vercel.app
           </Kicker>
         </div>
       </AbsoluteFill>

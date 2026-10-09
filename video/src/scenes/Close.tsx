@@ -66,7 +66,7 @@ export function Close() {
         <div style={{ opacity: ramp(t, 6.0, 6.9), fontFamily: F.sans, fontWeight: 300, fontSize: 34 * u, color: C.body }}>built for vibe/vibe on Robinhood Chain</div>
         <div style={{ opacity: ramp(t, 6.2, 7.0), marginTop: 10 * u }}>
           <Kicker size={30 * u} color={C.ink} style={{ letterSpacing: '0.08em', textTransform: 'none' }}>
-            vibevibe-gules.vercel.app
+            graduation-scout.vercel.app
           </Kicker>
         </div>
       </div>

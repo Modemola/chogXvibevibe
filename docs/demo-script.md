@@ -1,6 +1,6 @@
 # Graduation Scout: 90-second demo script
 
-Open the app at https://vibevibe-gules.vercel.app/?tour=1 (or click **Watch the 2-min tour** on the home page). The guided tour drives the pages
+Open the app at https://graduation-scout.vercel.app/?tour=1 (or click **Watch the 2-min tour** on the home page). The guided tour drives the pages
 for you; the script below is what to say over it. Arrow keys skip steps, space pauses, Esc ends the tour.
 Scrolling or touching also pauses it, so keep hands off the trackpad while recording.
 

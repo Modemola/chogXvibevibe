@@ -1,6 +1,6 @@
 # Graduation Scout
 
-**Live demo:** https://vibevibe-gules.vercel.app (guided tour: https://vibevibe-gules.vercel.app/?tour=1)
+**Live demo:** https://graduation-scout.vercel.app (guided tour: https://graduation-scout.vercel.app/?tour=1)
 
 Explainable airdrop allocation for [vibe/vibe](https://vibevibe.fun) graduations on Robinhood Chain.
 
