@@ -157,7 +157,13 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                   <Tilt className="h100" max={6}>
                     <div className="glass pad r-xl tmpl-card">
                       <div className="small muted">{e.name}</div>
-                      <div className={`score tnum ${e.score < 0 ? 'neg' : ''}`}>{e.score.toFixed(3)}</div>
+                      <div
+                        className={`score tnum ${e.score < 0 ? 'neg' : ''}`}
+                        style={e.excludedBy || !e.buckets.length ? { opacity: 0.45 } : undefined}
+                        title="The score only sizes a share inside a bucket the wallet qualifies for"
+                      >
+                        {e.score.toFixed(3)}
+                      </div>
                       <div>
                         {e.excludedBy ? (
                           <span className="chip bad" title={e.excludedBy}>
@@ -170,7 +176,15 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                             </span>
                           ))
                         ) : (
-                          <span className="faint tiny">no bucket</span>
+                          <>
+                            <span className="chip bad">not eligible</span>
+                            <div className="tiny faint" style={{ marginTop: 8 }}>
+                              Gets nothing. Needs{' '}
+                              {TEMPLATES[e.template].policy.buckets
+                                .map((b) => (typeof b.filter === 'string' ? b.filter : b.id))
+                                .join(' or ')}
+                            </div>
+                          </>
                         )}
                       </div>
                       {e.excludedBy && <code className="tiny faint">{e.excludedBy}</code>}
