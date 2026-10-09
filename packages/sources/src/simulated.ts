@@ -453,7 +453,9 @@ export function simulateWorld(options: SimOptions = {}): SimWorld {
         token: sparkToken,
         chain: 'sim',
         block: 30_000_000n,
-        takenAt: asOf - DAY,
+        // Taken before the season starts, like a real eligibility snapshot, so every launch
+        // that graduates during the season can see it (resolution only uses snapshots taken <= asOf).
+        takenAt: start,
         balances: sparkBalances.sort((a, b) => (a.wallet < b.wallet ? -1 : 1)),
       },
     ],
