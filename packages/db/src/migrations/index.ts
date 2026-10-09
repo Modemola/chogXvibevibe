@@ -212,4 +212,23 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX onchain_drops_token_idx ON onchain_drops (token);
     `,
   },
+  {
+    id: 5,
+    name: 'vibevibe_live',
+    sql: `
+      -- Real vibe/vibe launches read from Robinhood Chain testnet. Each also has a row in launches
+      -- (id 'vv-<launch number>'), so scoring treats them like any other launch.
+      CREATE TABLE vv_launches (
+        launch_id  text PRIMARY KEY REFERENCES launches(id),
+        number     bigint NOT NULL,
+        pool       text NOT NULL UNIQUE,
+        name       text NOT NULL,
+        symbol     text NOT NULL,
+        uri        text NOT NULL,
+        block      bigint NOT NULL,
+        tx_hash    text NOT NULL
+      );
+      CREATE INDEX vv_launches_number_idx ON vv_launches (number);
+    `,
+  },
 ];

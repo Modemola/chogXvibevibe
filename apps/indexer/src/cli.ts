@@ -27,7 +27,7 @@ import {
 import { BURN_SINK, createDropArgs, claimBatches } from '@scout/contracts';
 import { http, createPublicClient, createWalletClient, erc20Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { SPARK_BASE, createBaseClient, createRpcClient, simulateWorld, snapshotErc20 } from '@scout/sources';
+import { SPARK_BASE, createBaseClient, createRpcClient, ingestVibeVibe, simulateWorld, snapshotErc20 } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
 import { ingestScoutDrops } from './onchain.js';
 import { configWithHubs, latestActivity, resolveLaunch, sparkSnapshotFor } from './resolve-launch.js';
@@ -59,6 +59,9 @@ Commands
                                         them), fund the drop, push every claim. Needs DEPLOYER_PRIVATE_KEY in the
                                         environment. Defaults to the most recently graduated launch
                                         that has no Scout drop yet.
+  ingest-vibevibe --rpc URL [--from-block N] [--max-blocks N] [--to-block N]
+                                        Index real vibe/vibe launches, trades and graduations (Robinhood Chain
+                                        testnet) from where the last run stopped. Repeats until caught up.
   token-status --rpc URL --token 0x.. [--holder 0x..]
                                         Name, supply, the holder's balance, and whether transfers are open
                                         (vibe/vibe locks them until graduation). Exits 2 while locked.
@@ -95,6 +98,7 @@ const { positionals, values } = parseArgs({
     contract: { type: 'string' },
     scoutdrop: { type: 'string' },
     holder: { type: 'string' },
+    'max-blocks': { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -330,6 +334,30 @@ async function main() {
         console.log(`Wrote ${out}`);
         if (result.explorer) console.log(`ScoutDrop: ${result.explorer}/address/${result.scoutDrop}`);
         console.log(`Index it with: pnpm scout ingest-drops --rpc ${values.rpc} --contract ${result.scoutDrop} --from-block ${result.fromBlock}`);
+        break;
+      }
+
+      case 'ingest-vibevibe': {
+        if (!values.rpc) throw new Error('--rpc is required');
+        const client = createPublicClient({ transport: http(values.rpc, { timeout: 60_000 }) });
+        // Default start: just before $SCOUT launched (vibe/vibe launch #8422).
+        const startBlock = BigInt(values['from-block'] ?? '131490000');
+        const maxBlocks = BigInt(values['max-blocks'] ?? '50000');
+        const toBlock = values['to-block'] ? BigInt(values['to-block']) : undefined;
+        for (;;) {
+          const r = await ingestVibeVibe(db, { client, startBlock, maxBlocks, ...(toBlock ? { toBlock } : {}) });
+          console.log(
+            `Blocks ${r.fromBlock}..${r.toBlock} of ${r.head}: ${r.launches} launch(es), ${r.trades} trade(s), ${r.graduations} graduation(s)` +
+              (r.tradesSkipped ? `, ${r.tradesSkipped} trade(s) in pools launched before ${startBlock} skipped` : ''),
+          );
+          if (r.caughtUp) break;
+        }
+        const n = await db.query<{ launches: number; trades: number; graduated: number }>(
+          `SELECT (SELECT count(*)::int FROM vv_launches) AS launches,
+                  (SELECT count(*)::int FROM trades WHERE launch_id LIKE 'vv-%') AS trades,
+                  (SELECT count(*)::int FROM launches WHERE id LIKE 'vv-%' AND graduated_at IS NOT NULL) AS graduated`,
+        );
+        console.log(`Live: ${n[0]!.launches} launches, ${n[0]!.trades} trades, ${n[0]!.graduated} graduated`);
         break;
       }
 
