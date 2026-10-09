@@ -46,7 +46,7 @@ export default async function AftermathPage({ params }: { params: Promise<{ id: 
             {a.recipients.length
               ? `${a.recipients.length} wallets received ${tokens(a.totalAmount, 0)} tokens through Scout. Here is what they did with them.`
               : onchainDrop?.launchId === launch.id
-                ? 'Its Scout drop was paid out on-chain; the aftermath fills in once the drop is indexed.'
+                ? 'Its Scout drop was paid out on-chain, in a demo token standing in for this simulated launch’s token. Nobody trades the demo token, so there is no aftermath to measure.'
                 : 'No Scout drop recorded for this launch.'}
           </>
         }
