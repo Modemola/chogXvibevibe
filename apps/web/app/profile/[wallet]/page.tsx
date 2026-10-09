@@ -5,7 +5,7 @@ import { Item, Reveal, Stagger, Tilt } from '@/components/motion';
 import { PageHead } from '@/components/page-head';
 import { date, pct, reasonLabel, short, signed, tokens } from '@/lib/format';
 import { getService } from '@/lib/server';
-import { ApiError } from '@/lib/service';
+import { isApiError } from '@/lib/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,11 +19,13 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   try {
     p = await svc.profile(wallet, { template: q.template, lane: q.lane, pairClass: q.pair });
   } catch (e) {
-    if (e instanceof ApiError) {
+    if (isApiError(e)) {
       return (
         <div className="glass pad r-xl" style={{ maxWidth: 560, margin: '10vh auto' }}>
           <div className="kicker">Profile</div>
-          <h2 className="display" style={{ fontSize: 44, margin: '12px 0' }}>That doesn&apos;t look like a wallet.</h2>
+          <h2 className="display" style={{ fontSize: 44, margin: '12px 0' }}>
+            {/wallet/i.test(e.message) ? <>That doesn&apos;t look like a wallet.</> : <>Can&apos;t show this profile.</>}
+          </h2>
           <div className="notice error">{e.message}</div>
           <Link href="/" className="btn" style={{ marginTop: 18 }}>
             Back home

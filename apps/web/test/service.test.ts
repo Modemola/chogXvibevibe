@@ -223,6 +223,14 @@ describe('ScoutService', () => {
     expect(set.asOf).toBe(Number(row!.graduated_at));
   });
 
+  it('answers malformed preview requests with 400s, not crashes', async () => {
+    const policy = TEMPLATES.custom.policy;
+    for (const launch of [undefined, null, 'sim-0001', [], {}, { launchId: 5 }, { lane: 'utility' }, { lane: 'utility', pairClass: 'stock', creator: 'nope' }]) {
+      await expectApiError(svc.preview({ policy, launch: launch as never, sliceTokens: '1000' }), 400);
+    }
+    await expectApiError(svc.preview({ policy, launch: { launchId: 'nope' }, sliceTokens: '1000' }), 404);
+  });
+
   it('refuses to lock a policy once the launch has graduated', async () => {
     const { hash } = await svc.savePolicy(TEMPLATES.spark_core.policy);
     const launchId = world.batch.launches![1]!.id;

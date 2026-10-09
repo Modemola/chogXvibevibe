@@ -4,7 +4,7 @@ import path from 'node:path';
 import { type Db, createPgliteDb, migrate, openDb, runAftermath, writeBatch } from '@scout/db';
 import { simulateWorld } from '@scout/sources';
 import { NextResponse } from 'next/server';
-import { ApiError, ScoutService, toJson } from './service';
+import { ApiError, ScoutService, isApiError, toJson } from './service';
 
 /**
  * One service per server process. DATABASE_URL selects Postgres; otherwise
@@ -96,7 +96,7 @@ export async function handle(fn: (svc: ScoutService) => Promise<unknown>): Promi
     const out = await fn(await getService());
     return out instanceof NextResponse ? out : json(out);
   } catch (e) {
-    if (e instanceof ApiError) return json({ error: e.message, issues: e.issues }, e.status);
+    if (isApiError(e)) return json({ error: e.message, issues: e.issues }, e.status);
     console.error(e);
     return json({ error: 'Internal error' }, 500);
   }

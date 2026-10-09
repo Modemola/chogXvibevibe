@@ -48,6 +48,7 @@ import { SPARK_BASE } from '@scout/sources';
  */
 
 export class ApiError extends Error {
+  override readonly name = 'ApiError';
   constructor(
     readonly status: number,
     message: string,
@@ -55,6 +56,14 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+}
+
+/**
+ * Use this, not `instanceof`: in a production build a page and the service can be bundled
+ * into different chunks, each with its own ApiError class, so instanceof fails across them.
+ */
+export function isApiError(e: unknown): e is ApiError {
+  return e instanceof Error && e.name === 'ApiError' && typeof (e as ApiError).status === 'number';
 }
 
 export interface ServiceOptions {
@@ -361,8 +370,9 @@ export class ScoutService {
   }
 
   async resolve(input: { policy: unknown; launch: LaunchSpec; sliceTokens: string | number; asOf?: number }): Promise<AllocationSet> {
-    const asOf = input.asOf ?? (await this.graduationOf(input.launch)) ?? this.asOf();
-    const launch = await this.launchContext(input.launch, asOf);
+    const spec = parseLaunchSpec(input.launch);
+    const asOf = input.asOf ?? (await this.graduationOf(spec)) ?? this.asOf();
+    const launch = await this.launchContext(spec, asOf);
     const slice = parseSlice(input.sliceTokens);
     const pop = await this.population(asOf);
     const [creatorFacts] = await loadWalletFacts(this.db, { wallets: [launch.creator], asOf, sparkSnapshotId: pop.snapshotId });
@@ -556,6 +566,17 @@ function parseAddress(v: unknown, name: string): Address {
 function parseTemplate(v: string): TemplateId {
   if (!TEMPLATE_IDS.includes(v as TemplateId)) throw new ApiError(400, `Unknown template '${v}'`);
   return v as TemplateId;
+}
+
+/** Request bodies are untrusted: a launch is either {launchId} or {lane, pairClass, creator}. */
+function parseLaunchSpec(v: unknown): LaunchSpec {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new ApiError(400, 'Expected launch: {launchId} or {lane, pairClass, creator}');
+  const o = v as Record<string, unknown>;
+  if (o.launchId !== undefined) {
+    if (typeof o.launchId !== 'string' || !o.launchId || o.launchId.length > 200) throw new ApiError(400, 'Invalid launchId');
+    return { launchId: o.launchId };
+  }
+  return { lane: parseLane(String(o.lane)), pairClass: parsePair(String(o.pairClass)), creator: String(o.creator) };
 }
 
 function parseLane(v: string): Lane {

@@ -6,7 +6,7 @@ import { PageHead } from '@/components/page-head';
 import { date, pct, short, tokens } from '@/lib/format';
 import { onchainDrop } from '@/lib/onchain';
 import { getService } from '@/lib/server';
-import { ApiError } from '@/lib/service';
+import { isApiError } from '@/lib/service';
 import { StackBar } from './StackBar';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export default async function AftermathPage({ params }: { params: Promise<{ id: 
   try {
     a = await (await getService()).aftermath(decodeURIComponent(id));
   } catch (e) {
-    if (e instanceof ApiError) return <div className="notice error">{e.message}</div>;
+    if (isApiError(e)) return <div className="notice error">{e.message}</div>;
     throw e;
   }
   const { launch } = a;
