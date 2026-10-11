@@ -53,7 +53,7 @@ const RULES: Record<TemplateId, { buckets: Record<string, Rule>; allowed: Rule }
       long_chogs: (f) => f.chog_held_days >= 30 && f.dump_score < 0.5,
       holders: (f) => f.scout_drops_received >= 1 && f.dump_score < 0.25 && f.hold_quality >= 0.5,
     },
-    allowed: (f) => notSybil(f) && f.last_drop_sold_1h < 0.8,
+    allowed: (f) => notSybil(f) && f.last_drop_sold_1h < 0.8 && !f.created_rug,
   },
   custom: {
     buckets: { spark: (f) => f.spark_tier >= 1, holders: (f) => f.dump_score < 0.25 && f.hold_quality > 0.5, builders: (f) => f.shipped_substance },
@@ -82,6 +82,21 @@ describe('templates resolve correctly at graduation', () => {
     // The first graduations matter most: few profiles, and farms with only one wallet signed up.
     const rows = await db.query<{ id: string }>('SELECT id FROM launches WHERE graduated_at IS NOT NULL ORDER BY graduated_at, id');
     launchIds = [rows[0]!.id, rows[1]!.id, rows[2]!.id, rows[Math.floor(rows.length / 2)]!.id, rows[rows.length - 1]!.id];
+
+    // Give every fifth profile a Chog Genesis, with three histories: held long before the first graduation,
+    // first seen just before the middle one, and first seen after the last one (which must never count).
+    const grads = await db.query<{ t: string }>('SELECT graduated_at AS t FROM launches WHERE graduated_at IS NOT NULL ORDER BY graduated_at');
+    const first = Number(grads[0]!.t);
+    const mid = Number(grads[Math.floor(grads.length / 2)]!.t);
+    const last = Number(grads.at(-1)!.t);
+    // Ordered by sign-up time, so the earliest graduations already have Chog holders among their few profiles.
+    const profiles = await db.query<{ wallet: string }>('SELECT wallet FROM profiles ORDER BY opted_in_at, wallet');
+    for (let i = 0; i < profiles.length; i += 5) {
+      const heldSince = [first - 40 * 86_400, mid - 86_400, last + 3_600][(i / 5) % 3]!;
+      await db.query('INSERT INTO chog_status (wallet, tokens, chog_balance, held_since, checked_at) VALUES ($1, $2, 0, $3, $4)', [
+        profiles[i]!.wallet, 1 + (i % 3), heldSince, last,
+      ]);
+    }
   }, 60_000);
   afterAll(async () => {
     await db.close();
@@ -109,13 +124,30 @@ describe('templates resolve correctly at graduation', () => {
     expect(set.recipients.length).toBeGreaterThan(20);
   });
 
+  it('chog_holders: pays Chogs held by graduation, extra to long holders, never Chogs first seen later', async () => {
+    const chogs = await db.query<{ wallet: string; held_since: string }>('SELECT wallet, held_since FROM chog_status');
+    for (const id of launchIds) {
+      const { set, launch } = await resolveAt('chog_holders', id);
+      const heldBy = new Set(chogs.filter((c) => Number(c.held_since) <= launch.asOf).map((c) => c.wallet));
+      const longBy = new Set(chogs.filter((c) => launch.asOf - Number(c.held_since) >= 30 * 86_400).map((c) => c.wallet));
+      for (const r of set.recipients) {
+        const ids = r.buckets.map((b) => b.id);
+        if (ids.includes('chogs')) expect(heldBy.has(r.wallet), `${id} ${r.wallet} paid as a Chog`).toBe(true);
+        if (ids.includes('long_chogs')) expect(longBy.has(r.wallet), `${id} ${r.wallet} paid as a long Chog`).toBe(true);
+      }
+      expect(set.buckets.find((b) => b.id === 'chogs')!.recipients, id).toBeGreaterThan(0);
+    }
+    // By the last graduation two of the three Chog cohorts count, and the oldest is past 30 days.
+    const { set } = await resolveAt('chog_holders', launchIds.at(-1)!);
+    expect(set.buckets.find((b) => b.id === 'long_chogs')!.candidates).toBeGreaterThan(0);
+  }, 120_000);
+
   for (const template of TEMPLATE_IDS) {
     it(`${template}: pays only wallets its rules allow, within caps, with valid proofs`, async () => {
       for (const id of launchIds) {
         const { set, again, facts, evidence, creatorFacts, launch } = await resolveAt(template, id);
         const tag = `${template} ${id}`;
-        // Nobody in the simulated world holds a Chog, so the Chog recipe may rightly pay nobody early on.
-        if (template !== 'chog_holders') expect(set.recipients.length, tag).toBeGreaterThan(0);
+        expect(set.recipients.length, tag).toBeGreaterThan(0);
         expect(json(again), `${tag} deterministic`).toBe(json(set));
         expect(set.policyHash).toBe(policyHash(compilePolicy(TEMPLATES[template].policy)));
         expect(set.recipients.reduce((s, r) => s + r.amount, 0n)).toBe(set.allocated);
@@ -149,9 +181,7 @@ describe('templates resolve correctly at graduation', () => {
         const claims = set.recipients.map((r) => ({ wallet: r.wallet, amount: r.amount }));
         const proofs = merkleProofs(claims);
         for (const c of claims) expect(verifyClaim(set.merkleRoot!, c, proofs.get(c.wallet)!)).toBe(true);
-        if (claims.length) {
-          expect(verifyClaim(set.merkleRoot!, { ...claims[0]!, amount: claims[0]!.amount + 1n }, proofs.get(claims[0]!.wallet)!)).toBe(false);
-        }
+        expect(verifyClaim(set.merkleRoot!, { ...claims[0]!, amount: claims[0]!.amount + 1n }, proofs.get(claims[0]!.wallet)!)).toBe(false);
       }
     }, 120_000);
   }

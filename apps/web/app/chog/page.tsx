@@ -67,8 +67,9 @@ export default async function ChogPage() {
             <div className="kicker">3 · The Chog Holders recipe</div>
             <h3 style={{ margin: '12px 0 8px' }}>Pay Chogs first</h3>
             <p className="muted small">
-              {recipe.policy.buckets.map((b) => `${b.weightBps / 100}% ${b.id.replace('_', ' ')}`).join(' · ')}. Chogs who dump their drops
-              and farm clusters are still left out.
+              {recipe.policy.buckets.map((b) => `${b.weightBps / 100}% ${b.id.replace('_', ' ')}`).join(' · ')}. Chogs who dump their drops,
+              rug a launch or farm with clusters are still left out. With few holders, every Chog gets the per-wallet maximum;
+              the long-hold extra shows once there are more holders than the cap allows to fill.
             </p>
             <Link href="/builder?template=chog_holders" className="btn sm primary" style={{ marginTop: 10 }}>
               Use the recipe

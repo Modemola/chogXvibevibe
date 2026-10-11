@@ -90,7 +90,7 @@ export const TEMPLATES: Record<TemplateId, Template> = {
         { id: 'long_chogs', weightBps: 2_500, filter: 'chog_held_days >= 30 AND dump_score < 0.5' },
         { id: 'holders', weightBps: 1_500, filter: 'scout_drops_received >= 1 AND dump_score < 0.25 AND hold_quality >= 0.5' },
       ],
-      excludes: [...COMMON_EXCLUDES, 'last_drop_sold_1h >= 0.8'],
+      excludes: [...COMMON_EXCLUDES, 'last_drop_sold_1h >= 0.8', 'created_rug'],
       fallbackBucket: 'chogs',
     },
   },

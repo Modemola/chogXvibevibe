@@ -296,7 +296,9 @@ nothing is signed on Monad.
 - **Score.** Holding a Chog adds `CHOG_HOLDER` (+0.10 alignment); holding one for 30+ days adds `CHOG_LONG_HOLD` (+0.05).
 - **Filters.** `chog_holder`, `chog_count`, `chog_held_days`, `chog_balance` (whole $CHOG).
 - **Chog Holders recipe.** 60% to Chog holders who don't dump, 25% more to 30+ day holders, 15% to proven drop
-  holders; farms and last-drop dumpers excluded.
+  holders; farms, rug creators and last-drop dumpers excluded. Per-wallet caps still apply: with few holders every
+  Chog reaches the cap from the first bucket, so the long-hold extra appears once there are enough holders (checked
+  with 248 simulated holders: 30+ day holders averaged 5,000 tokens, newer ones 3,772).
 - **Page.** `/chog` lists signed-up holders and links the recipe into the builder.
 - **CLI.** `pnpm scout sync-chog [wallet ...]` refreshes holdings for given wallets or every signed-up wallet.
 
