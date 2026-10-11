@@ -231,4 +231,19 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX vv_launches_number_idx ON vv_launches (number);
     `,
   },
+  {
+    id: 6,
+    name: 'chog_status',
+    sql: `
+      -- Chog Genesis NFTs and $CHOG held on Monad mainnet by the same address. Read with balanceOf,
+      -- so "held since" is when Scout first saw the wallet holding a Chog, reset when it holds none.
+      CREATE TABLE chog_status (
+        wallet        text PRIMARY KEY,
+        tokens        integer NOT NULL,
+        chog_balance  numeric(78,0) NOT NULL DEFAULT 0,
+        held_since    bigint,
+        checked_at    bigint NOT NULL
+      );
+    `,
+  },
 ];

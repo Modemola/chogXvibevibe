@@ -202,6 +202,19 @@ export async function loadWalletFacts(db: Db, opts: LoadFactsOptions): Promise<W
     f.viber = cur;
   }
 
+  // Chog Genesis on Monad. Only the current reading is kept, so a Chog first seen after asOf does not count.
+  const chogs = await db.query<{ wallet: string; tokens: number; chog_balance: string; held_since: string | null }>(
+    'SELECT wallet, tokens, chog_balance::text AS chog_balance, held_since FROM chog_status WHERE wallet = ANY($1::text[])',
+    [wallets],
+  );
+  for (const c of chogs) {
+    const tokens = num(c.tokens);
+    const chogBalance = BigInt(c.chog_balance);
+    if (tokens === 0 && chogBalance === 0n) continue;
+    const heldSince = optNum(c.held_since);
+    get(c.wallet).chog = { tokens, chogBalance, ...(heldSince !== undefined ? { heldSince } : {}) };
+  }
+
   const guilds = await db.query<{ wallet: string; guild_id: string; good_standing: boolean }>(
     'SELECT wallet, guild_id, good_standing FROM guild_members WHERE wallet = ANY($1::text[]) ORDER BY guild_id',
     [wallets],

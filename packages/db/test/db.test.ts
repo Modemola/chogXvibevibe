@@ -4,6 +4,9 @@ import {
   type Db,
   type RecordBatch,
   createPgliteDb,
+  getChogStatus,
+  listChogHolders,
+  saveChogStatus,
   latestSnapshotId,
   listProfileWallets,
   loadLaunchContext,
@@ -148,5 +151,26 @@ describe('db', () => {
       }),
     ).rejects.toThrow();
     expect(await db.query("SELECT id FROM launches WHERE id = 'OK'")).toEqual([]);
+  });
+
+  it('tracks Chog holdings: held since first seen, kept while held, cleared when gone', async () => {
+    await writeBatch(db, batch());
+    const first = await saveChogStatus(db, { wallet: ALICE, tokens: 1, chogBalance: 5n * E18, checkedAt: T0 - 40 * DAY });
+    expect(first.heldSince).toBe(T0 - 40 * DAY);
+    const again = await saveChogStatus(db, { wallet: ALICE, tokens: 2, chogBalance: 0n, checkedAt: T0 - DAY });
+    expect(again.heldSince).toBe(T0 - 40 * DAY);
+    await saveChogStatus(db, { wallet: BOB, tokens: 0, chogBalance: 7n * E18, checkedAt: T0 });
+
+    const [alice, bob, creator] = await loadWalletFacts(db, { wallets: [ALICE, BOB, CREATOR], asOf: T0 });
+    expect(alice!.chog).toEqual({ tokens: 2, chogBalance: 0n, heldSince: T0 - 40 * DAY });
+    expect(bob!.chog).toEqual({ tokens: 0, chogBalance: 7n * E18 });
+    expect(creator!.chog).toBeUndefined();
+    expect((await listChogHolders(db)).map((h) => h.wallet)).toEqual([ALICE]);
+
+    const sold = await saveChogStatus(db, { wallet: ALICE, tokens: 0, chogBalance: 0n, checkedAt: T0 });
+    expect(sold.heldSince).toBeUndefined();
+    const back = await saveChogStatus(db, { wallet: ALICE, tokens: 1, chogBalance: 0n, checkedAt: T0 + DAY });
+    expect(back.heldSince).toBe(T0 + DAY);
+    expect((await getChogStatus(db, [ALICE])).get(ALICE)!.tokens).toBe(1);
   });
 });

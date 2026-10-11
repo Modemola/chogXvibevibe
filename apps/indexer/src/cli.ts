@@ -27,7 +27,7 @@ import {
 import { BURN_SINK, createDropArgs, claimBatches } from '@scout/contracts';
 import { http, createPublicClient, createWalletClient, erc20Abi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { SPARK_BASE, createBaseClient, createRpcClient, ingestVibeVibe, simulateWorld, snapshotErc20 } from '@scout/sources';
+import { CHOG_MONAD, SPARK_BASE, createBaseClient, createRpcClient, ingestVibeVibe, monadClient, simulateWorld, snapshotErc20, syncChog } from '@scout/sources';
 import { evaluate, renderReport } from './evaluate.js';
 import { ingestScoutDrops } from './onchain.js';
 import { configWithHubs, latestActivity, resolveLaunch, sparkSnapshotFor } from './resolve-launch.js';
@@ -62,6 +62,8 @@ Commands
   ingest-vibevibe --rpc URL [--from-block N] [--max-blocks N] [--to-block N]
                                         Index real vibe/vibe launches, trades and graduations (Robinhood Chain
                                         testnet) from where the last run stopped. Repeats until caught up.
+  sync-chog [wallet ...] [--rpc URL]    Read Chog Genesis NFTs and $CHOG on Monad mainnet for the given wallets,
+                                        or every signed-up wallet. The same address on both chains.
   token-status --rpc URL --token 0x.. [--holder 0x..]
                                         Name, supply, the holder's balance, and whether transfers are open
                                         (vibe/vibe locks them until graduation). Exits 2 while locked.
@@ -358,6 +360,18 @@ async function main() {
                   (SELECT count(*)::int FROM launches WHERE id LIKE 'vv-%' AND graduated_at IS NOT NULL) AS graduated`,
         );
         console.log(`Live: ${n[0]!.launches} launches, ${n[0]!.trades} trades, ${n[0]!.graduated} graduated`);
+        break;
+      }
+
+      case 'sync-chog': {
+        const client = monadClient(values.rpc ?? CHOG_MONAD.rpc);
+        const wallets = rest.length ? rest.map(normalizeAddress) : await db.query<{ wallet: string }>('SELECT wallet FROM profiles ORDER BY wallet').then((r) => r.map((x) => x.wallet as Address));
+        const r = await syncChog(db, { client, wallets });
+        for (const w of wallets) {
+          const s = r.statuses.get(w)!;
+          console.log(`${w}  ${s.tokens} Chog${s.tokens === 1 ? '' : 's'}  ${(Number(s.chogBalance / 10n ** 15n) / 1000).toLocaleString('en-US')} $CHOG${s.heldSince ? `  seen holding since ${new Date(s.heldSince * 1000).toISOString().slice(0, 10)}` : ''}`);
+        }
+        console.log(`Checked ${r.checked} wallet(s) on Monad: ${r.holders} hold a Chog`);
         break;
       }
 
