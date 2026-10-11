@@ -40,8 +40,8 @@ import {
   loadLaunchContext,
   loadWalletFacts,
 } from '@scout/db';
-import { SPARK_BASE, claimLiveSync, ingestVibeVibe, liveSyncState } from '@scout/sources';
-import { createPublicClient, http } from 'viem';
+import { CHOG_MONAD, SPARK_BASE, claimLiveSync, ingestVibeVibe, liveSyncState, monadClient, syncChog } from '@scout/sources';
+import { type PublicClient, createPublicClient, http } from 'viem';
 
 /** Live indexing starts just before $SCOUT launched (vibe/vibe launch #8422). */
 const LIVE_START_BLOCK = 131_490_000n;
@@ -77,6 +77,8 @@ export interface ServiceOptions {
   nonceTtlSec?: number;
   /** How long a loaded population stays cached. */
   cacheSec?: number;
+  /** Reads Chog holdings on Monad. Defaults to the public Monad RPC; null turns Chog lookups off. */
+  chogClient?: Pick<PublicClient, 'multicall'> | null;
 }
 
 export type LaunchSpec = { launchId: string } | { lane: Lane; pairClass: PairClass; creator: string };
@@ -100,6 +102,7 @@ export class ScoutService {
   private readonly nonceTtl: number;
   private readonly cacheSec: number;
   private cache?: { key: number; at: number; pop: Promise<Population> };
+  private chogClient?: Pick<PublicClient, 'multicall'> | null;
 
   constructor(
     private readonly db: Db,
@@ -109,6 +112,7 @@ export class ScoutService {
     this.hubFanout = opts.ignoreHubsMinFanout ?? 20;
     this.nonceTtl = opts.nonceTtlSec ?? 600;
     this.cacheSec = opts.cacheSec ?? 60;
+    this.chogClient = opts.chogClient;
   }
 
   // --- Population -------------------------------------------------------------
@@ -304,6 +308,52 @@ export class ScoutService {
     return { ...added, block: r.toBlock.toString(), head: r.head.toString(), caughtUp: r.caughtUp };
   }
 
+  /**
+   * Refreshes wallets' Chog Genesis and $CHOG holdings from Monad, at most every 10 minutes per
+   * wallet. Best effort: if Monad is slow or down, pages carry on with what is already stored.
+   * Returns true when a reading changed.
+   */
+  async refreshChog(wallets: Address[], timeoutMs = 5_000): Promise<boolean> {
+    if (this.chogClient === undefined) {
+      this.chogClient = process.env.SCOUT_CHOG === '0' ? null : monadClient(process.env.SCOUT_CHOG_RPC ?? CHOG_MONAD.rpc);
+    }
+    if (!this.chogClient || !wallets.length) return false;
+    try {
+      const sync = syncChog(this.db, { client: this.chogClient, wallets, now: this.now(), maxAgeSec: 600 });
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref?.());
+      const r = await Promise.race([sync, timeout]);
+      if (!r) return false;
+      if (r.changed) this.invalidate();
+      return r.changed > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Signed-up wallets holding a Chog Genesis, for the Chog page. */
+  async chogHolders(limit = 100) {
+    const rows = await this.db.query<{ wallet: string; tokens: number; chog_balance: string; held_since: string | null }>(
+      `SELECT c.wallet, c.tokens, c.chog_balance::text AS chog_balance, c.held_since
+         FROM chog_status c JOIN profiles p ON p.wallet = c.wallet
+        WHERE c.tokens > 0 ORDER BY c.tokens DESC, c.held_since ASC, c.wallet LIMIT $1`,
+      [limit],
+    );
+    const [counts] = await this.db.query<{ profiles: number; holders: number }>(
+      `SELECT (SELECT count(*)::int FROM profiles) AS profiles,
+              (SELECT count(*)::int FROM chog_status c JOIN profiles p ON p.wallet = c.wallet WHERE c.tokens > 0) AS holders`,
+    );
+    return {
+      profiles: counts?.profiles ?? 0,
+      holders: counts?.holders ?? 0,
+      list: rows.map((r) => ({
+        wallet: r.wallet as Address,
+        tokens: Number(r.tokens),
+        chogBalance: BigInt(r.chog_balance),
+        heldSince: r.held_since == null ? null : Number(r.held_since),
+      })),
+    };
+  }
+
   /** Recent measured drop outcomes (latest window per drop), for the live ticker. */
   async highlights(limit = 24) {
     const rows = await this.db.query<{ launch_id: string; wallet: string; window: string; sold_bps: number }>(
@@ -388,6 +438,7 @@ export class ScoutService {
 
     // The profile row is read fresh: the cached population can be up to a minute old, and on a host with
     // several server instances an opt-in made through another instance would otherwise not show up yet.
+    await this.refreshChog([wallet]);
     const [profileRow] = await this.db.query<{ opted_in_at: string }>('SELECT opted_in_at FROM profiles WHERE wallet = $1', [wallet]);
     let pop = await this.population(asOf);
     if (profileRow && Number(profileRow.opted_in_at) <= asOf && !pop.facts.has(wallet)) {
@@ -444,6 +495,7 @@ export class ScoutService {
       guilds: facts!.guilds,
       drops: [...facts!.scoutDrops].sort((a, b) => b.receivedAt - a.receivedAt),
       createdLaunches: facts!.createdLaunches,
+      chog: facts!.chog ?? null,
       eligibility,
     };
   }
@@ -584,6 +636,7 @@ export class ScoutService {
        ON CONFLICT (wallet) DO NOTHING RETURNING wallet`,
       [action.wallet, this.now(), input.message, input.signature],
     );
+    await this.refreshChog([action.wallet]);
     this.invalidate();
     return { wallet: action.wallet, created: inserted.length > 0 };
   }

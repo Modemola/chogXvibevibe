@@ -10,6 +10,7 @@ import { CommandPalette } from './command';
 const LINKS = [
   { href: '/builder', label: 'Policy builder' },
   { href: '/launches', label: 'Launches' },
+  { href: '/chog', label: 'Chog' },
   { href: '/join', label: 'Join' },
 ];
 

@@ -22,6 +22,6 @@ export default defineConfig({
     url: `http://localhost:${port}/api/stats`,
     timeout: 120_000,
     reuseExistingServer: false,
-    env: { SCOUT_PGLITE_DIR: dataDir, SCOUT_SIMULATE: '1', SCOUT_LIVE: '0' },
+    env: { SCOUT_PGLITE_DIR: dataDir, SCOUT_SIMULATE: '1', SCOUT_LIVE: '0', SCOUT_CHOG: '0' },
   },
 });

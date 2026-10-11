@@ -92,6 +92,11 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
               Alt <Link href={`/profile/${a}`}>{short(a)}</Link>
             </span>
           ))}
+          {p.fields.chog_holder && (
+            <span className="chip good">
+              <Link href="/chog">Chog holder</Link> · {p.fields.chog_count}
+            </span>
+          )}
           {p.cluster.size > 1 && <span className="chip">Cluster of {p.cluster.size}</span>}
           {p.cluster.sybilScore > 0 && <span className="chip bad">Sybil penalty {pct(p.cluster.sybilScore, 0)}</span>}
         </div>
@@ -288,6 +293,19 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                 <dd>{p.viber ? `level ${p.viber.level}${p.fields.viber_charged ? ' · charged' : ''}` : '–'}</dd>
                 <dt>Guilds</dt>
                 <dd>{p.guilds.length ? p.guilds.map((g) => g.id).join(', ') : '–'}</dd>
+                <dt>Chog Genesis</dt>
+                <dd>
+                  {p.chog && p.chog.tokens > 0 ? (
+                    <>
+                      {p.chog.tokens} on Monad
+                      {p.chog.heldSince ? <span className="faint"> · seen since {date(p.chog.heldSince)}</span> : null}
+                    </>
+                  ) : (
+                    '–'
+                  )}
+                </dd>
+                <dt>$CHOG</dt>
+                <dd className="mono">{p.chog?.chogBalance ? tokens(p.chog.chogBalance, 0) : '–'}</dd>
                 <dt>Markets traded</dt>
                 <dd>
                   {p.fields.markets_traded} <span className="faint">· {p.fields.stock_pair_markets} stock-paired</span>

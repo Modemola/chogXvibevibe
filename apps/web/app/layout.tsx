@@ -43,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="row" style={{ marginTop: 16, gap: 18 }}>
                 <Link href="/builder" className="link">Builder</Link>
                 <Link href="/launches" className="link">Launches</Link>
+                <Link href="/chog" className="link">Chog</Link>
                 <Link href="/join" className="link">Join</Link>
               </div>
             </div>

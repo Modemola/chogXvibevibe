@@ -283,6 +283,27 @@ Limits: vibe/vibe has no lanes, so live launches are treated as `meme` (no lane 
 event, so the shared-funder signal is not available for live wallets yet (copied buys are); trades after graduation
 happen on Uniswap v4 and are not indexed yet.
 
+## Chog: vibe/vibe × Chog (Chogathon)
+
+Chog Genesis NFTs and $CHOG live on Monad mainnet; vibe/vibe trading lives on Robinhood Chain testnet. A wallet
+has the same address on both, so Scout reads Monad for the wallet a user signs up with. Nothing is bridged and
+nothing is signed on Monad.
+
+- **Chog passport.** On sign-up and on profile views (at most every 10 minutes per wallet), Scout reads
+  `balanceOf` on Chog Genesis ([`0xc96d…3763`](https://monadscan.com/address/0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763))
+  and $CHOG ([`0x3500…7777`](https://monadscan.com/address/0x350035555e10d9afaf1566aaebfced5ba6c27777)) through
+  Multicall3 and stores it in `chog_status`. If Monad is slow or down, pages carry on with the last reading.
+- **Score.** Holding a Chog adds `CHOG_HOLDER` (+0.10 alignment); holding one for 30+ days adds `CHOG_LONG_HOLD` (+0.05).
+- **Filters.** `chog_holder`, `chog_count`, `chog_held_days`, `chog_balance` (whole $CHOG).
+- **Chog Holders recipe.** 60% to Chog holders who don't dump, 25% more to 30+ day holders, 15% to proven drop
+  holders; farms and last-drop dumpers excluded.
+- **Page.** `/chog` lists signed-up holders and links the recipe into the builder.
+- **CLI.** `pnpm scout sync-chog [wallet ...]` refreshes holdings for given wallets or every signed-up wallet.
+
+"Held since" is when Scout first saw the wallet holding a Chog (the public Monad RPC limits log queries to 100
+blocks, so transfer history isn't replayed). Set `SCOUT_CHOG=0` to turn lookups off, or `SCOUT_CHOG_RPC` to use
+another Monad RPC. Adding Chog changed no existing recipe: all five resolve to identical allocations and Merkle roots.
+
 ## Scoring model
 
 For wallet `w` and launch `L`:

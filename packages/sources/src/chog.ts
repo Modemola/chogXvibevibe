@@ -56,7 +56,7 @@ export async function readChogHoldings(client: Pick<PublicClient, 'multicall'>, 
 export async function syncChog(
   db: Db,
   opts: { client: Pick<PublicClient, 'multicall'>; wallets: Address[]; now?: number; maxAgeSec?: number },
-): Promise<{ checked: number; holders: number; statuses: Map<Address, ChogStatusRecord> }> {
+): Promise<{ checked: number; holders: number; changed: number; statuses: Map<Address, ChogStatusRecord> }> {
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   const wallets = [...new Set(opts.wallets.map(normalizeAddress))];
   const known = await getChogStatus(db, wallets);
@@ -66,12 +66,15 @@ export async function syncChog(
   });
   const statuses = new Map(known);
   let holders = 0;
+  let changed = 0;
   if (stale.length) {
     for (const h of await readChogHoldings(opts.client, stale)) {
       const saved = await saveChogStatus(db, { ...h, checkedAt: now });
       statuses.set(h.wallet, saved);
       if (h.tokens > 0) holders++;
+      const before = known.get(h.wallet);
+      if ((before?.tokens ?? 0) !== h.tokens || (before?.chogBalance ?? 0n) !== h.chogBalance) changed++;
     }
   }
-  return { checked: stale.length, holders, statuses };
+  return { checked: stale.length, holders, changed, statuses };
 }

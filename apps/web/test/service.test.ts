@@ -21,7 +21,7 @@ describe('ScoutService', () => {
     await migrate(db);
     await writeBatch(db, world.batch);
     await runAftermath(db, { now: world.asOf });
-    svc = new ScoutService(db, { now: () => clock, cacheSec: 0 });
+    svc = new ScoutService(db, { now: () => clock, cacheSec: 0, chogClient: null });
   }, 60_000);
   afterAll(async () => {
     await db.close();
@@ -77,12 +77,44 @@ describe('ScoutService', () => {
     const carol = privateKeyToAccount(generatePrivateKey());
     const C = normalizeAddress(carol.address);
     // A second instance on the same database, whose population cache is warmed before the opt-in.
-    const other = new ScoutService(db, { now: () => clock, cacheSec: 600 });
+    const other = new ScoutService(db, { now: () => clock, cacheSec: 600, chogClient: null });
     expect((await other.profile(C)).optedIn).toBe(false);
     const env = await svc.issueNonce();
     const message = buildMessage({ kind: 'opt_in', wallet: C }, env);
     await svc.optIn({ message, signature: await carol.signMessage({ message }) });
     expect((await other.profile(C)).optedIn).toBe(true);
+  });
+
+  it('reads Chog holdings from Monad on sign-up, scores them, and survives Monad being down', async () => {
+    const chog = privateKeyToAccount(generatePrivateKey());
+    const D = normalizeAddress(chog.address);
+    let reads = 0;
+    const monad = {
+      async multicall({ contracts }: { contracts: readonly { args: readonly [string] }[] }) {
+        reads++;
+        // Every wallet asked about holds 2 Chog Genesis and 1,500 $CHOG.
+        return contracts.map((_, i) => (i % 2 === 0 ? 2n : 1_500n * 10n ** 18n));
+      },
+    };
+    const withChog = new ScoutService(db, { now: () => clock, cacheSec: 600, chogClient: monad as never });
+    const { nonce, issuedAt } = await withChog.issueNonce();
+    const message = buildMessage({ kind: 'opt_in', wallet: D }, { nonce, issuedAt });
+    await withChog.optIn({ message, signature: await chog.signMessage({ message }) });
+    expect(reads).toBe(1);
+
+    const p = await withChog.profile(D, { template: 'chog_holders' });
+    expect(reads).toBe(1); // read at sign-up, still fresh
+    expect(p.chog).toEqual({ tokens: 2, chogBalance: 1_500n * 10n ** 18n, heldSince: clock });
+    expect(p.fields).toMatchObject({ chog_holder: true, chog_count: 2, chog_balance: 1_500 });
+    expect(p.reasons.map((r) => r.code)).toContain('CHOG_HOLDER');
+    expect(p.eligibility.find((e) => e.template === 'chog_holders')!.buckets).toContain('chogs');
+    expect((await withChog.chogHolders()).list.map((h) => h.wallet)).toContain(D);
+
+    // A wallet with no Chog scores exactly as before, and Monad being down never breaks a page.
+    const down = new ScoutService(db, { now: () => clock, cacheSec: 0, chogClient: { multicall: () => Promise.reject(new Error('rpc down')) } as never });
+    const plain = world.batch.profiles![1]!.wallet;
+    expect((await down.profile(plain)).score).toBe((await svc.profile(plain)).score);
+    expect((await down.profile(D)).chog?.tokens).toBe(2);
   });
 
   it('links wallets only when both sign', async () => {

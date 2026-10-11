@@ -34,7 +34,7 @@ describe('Chog on Monad', () => {
     await migrate(db);
     const m = fakeMonad({ [a(1)]: 1 }, {});
     const first = await syncChog(db, { client: m as never, wallets: [a(1), a(2)], now: 1_000 });
-    expect(first).toMatchObject({ checked: 2, holders: 1 });
+    expect(first).toMatchObject({ checked: 2, holders: 1, changed: 1 });
     expect(first.statuses.get(a(1))!.heldSince).toBe(1_000);
 
     const cached = await syncChog(db, { client: m as never, wallets: [a(1)], now: 1_100, maxAgeSec: 600 });
@@ -42,7 +42,7 @@ describe('Chog on Monad', () => {
     expect(m.calls).toHaveLength(1);
 
     const later = await syncChog(db, { client: m as never, wallets: [a(1)], now: 5_000, maxAgeSec: 600 });
-    expect(later.checked).toBe(1);
+    expect(later).toMatchObject({ checked: 1, changed: 0 });
     expect(later.statuses.get(a(1))!.heldSince).toBe(1_000);
     await db.close();
   });

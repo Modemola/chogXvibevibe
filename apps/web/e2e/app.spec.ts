@@ -139,3 +139,12 @@ test('works on a phone-sized screen', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
   await page.screenshot({ path: 'e2e/screens/builder-mobile.png', fullPage: true });
 });
+
+test('Chog page explains the integration and links the recipe to the builder', async ({ page }) => {
+  await page.goto('/chog');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Chogs that stay');
+  await expect(page.getByText('No Chog holders have signed up yet')).toBeVisible();
+  await page.getByRole('link', { name: 'Use the recipe' }).click();
+  await expect(page).toHaveURL(/\/builder\?template=chog_holders/);
+  await expect(page.locator('select').filter({ hasText: 'Chog Holders' }).first()).toHaveValue('chog_holders');
+});
