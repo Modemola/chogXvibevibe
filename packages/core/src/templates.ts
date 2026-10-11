@@ -77,6 +77,23 @@ export const TEMPLATES: Record<TemplateId, Template> = {
       fallbackBucket: 'natives',
     },
   },
+  chog_holders: {
+    id: 'chog_holders',
+    name: 'Chog Holders',
+    description: 'vibe/vibe × Chog: Chog Genesis holders who stay get the drop; long-time Chogs get extra.',
+    weights: { alpha: 0.4, beta: 0.1, gamma: 0.5, delta: 1, epsilon: 1 },
+    policy: {
+      version: 1,
+      template: 'chog_holders',
+      buckets: [
+        { id: 'chogs', weightBps: 6_000, filter: 'chog_holder AND dump_score < 0.5' },
+        { id: 'long_chogs', weightBps: 2_500, filter: 'chog_held_days >= 30 AND dump_score < 0.5' },
+        { id: 'holders', weightBps: 1_500, filter: 'scout_drops_received >= 1 AND dump_score < 0.25 AND hold_quality >= 0.5' },
+      ],
+      excludes: [...COMMON_EXCLUDES, 'last_drop_sold_1h >= 0.8'],
+      fallbackBucket: 'chogs',
+    },
+  },
   custom: {
     id: 'custom',
     name: 'Custom',

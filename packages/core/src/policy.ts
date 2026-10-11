@@ -14,6 +14,7 @@ export const TEMPLATE_IDS = [
   'hold_or_die',
   'builder_lane',
   'stock_pair_natives',
+  'chog_holders',
   'custom',
 ] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];

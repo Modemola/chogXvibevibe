@@ -179,6 +179,29 @@ describe('resolveAllocation', () => {
     expect(verifyClaim(set.merkleRoot!, { ...r, amount: r.amount + 1n }, proofs.get(r.wallet)!)).toBe(false);
   });
 
+  it('Chog Holders pays Chog Genesis holders who stay, extra to long holders, and explains why', () => {
+    const wallets = [
+      wallet(1, { chog: { tokens: 2, heldSince: T0 - 90 * DAY } }), // long-time Chog
+      wallet(2, { chog: { tokens: 1, heldSince: T0 - 3 * DAY } }), // new Chog
+      wallet(3, { chog: { tokens: 1, heldSince: T0 - 90 * DAY }, scoutDrops: [drop(5, 1), drop(15, 1), drop(25, 0.9)] }), // Chog who dumps
+      wallet(4, { chog: { tokens: 1, heldSince: T0 + DAY } }), // bought after the snapshot
+      wallet(5, { chog: { tokens: 0, chogBalance: 5_000n * SPARK } }), // $CHOG only, no NFT
+      wallet(6), // nobody
+    ];
+    // Loose caps: with only two holders, the default 0.5% wallet cap would fill before the long-hold bucket.
+    const policy = { ...TEMPLATES.chog_holders.policy, caps: { perWalletBps: 10_000, perClusterBps: 10_000 } };
+    const set = resolveAllocation(input({ wallets, policy }));
+    const paid = new Map(set.recipients.map((r) => [r.wallet, r]));
+    expect([...paid.keys()].sort()).toEqual([addr(1), addr(2)]);
+    expect(paid.get(addr(1))!.buckets.map((b) => b.id).sort()).toEqual(['chogs', 'long_chogs']);
+    expect(paid.get(addr(2))!.buckets.map((b) => b.id)).toEqual(['chogs']);
+    expect(paid.get(addr(1))!.reasons.map((r) => r.code)).toEqual(expect.arrayContaining(['CHOG_HOLDER', 'CHOG_LONG_HOLD']));
+    const w2 = paid.get(addr(2))!.reasons.map((r) => r.code);
+    expect(w2).toContain('CHOG_HOLDER');
+    expect(w2).not.toContain('CHOG_LONG_HOLD');
+    expect(paid.get(addr(1))!.amount).toBeGreaterThan(paid.get(addr(2))!.amount);
+  });
+
   it('handles an empty population', () => {
     const set = resolveAllocation(input({ wallets: [] }));
     expect(set.recipients).toEqual([]);

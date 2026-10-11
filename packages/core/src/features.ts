@@ -170,7 +170,7 @@ function compact(n: number): string {
   return `${n}`;
 }
 
-/** A: SPARK tier, Viber status, guild standing, shipping record. */
+/** A: SPARK tier, Viber status, guild standing, Chog Genesis, shipping record. */
 export function alignment(facts: WalletFacts, launch: LaunchContext, config: ScoringConfig): Feature {
   const cfg = config.alignment;
   const components: FeatureComponent[] = [];
@@ -205,6 +205,19 @@ export function alignment(facts: WalletFacts, launch: LaunchContext, config: Sco
 
   if (facts.guilds.some((g) => g.goodStanding)) {
     components.push({ code: 'GUILD_GOOD_STANDING', value: cfg.guildGoodStanding });
+  }
+
+  // Chog Genesis (Monad): only counts if the Chog was already held at the launch's time.
+  const chog = facts.chog;
+  if (chog && chog.tokens > 0 && (chog.heldSince === undefined || chog.heldSince <= launch.asOf)) {
+    components.push({
+      code: 'CHOG_HOLDER',
+      value: cfg.chogHolder,
+      detail: `holds ${chog.tokens} Chog Genesis ${chog.tokens === 1 ? 'NFT' : 'NFTs'}`,
+    });
+    if (chog.heldSince !== undefined && launch.asOf - chog.heldSince >= cfg.chogLongHoldDays * DAY) {
+      components.push({ code: 'CHOG_LONG_HOLD', value: cfg.chogLongHold, detail: `held a Chog ${Math.floor((launch.asOf - chog.heldSince) / DAY)} days` });
+    }
   }
 
   const shipped = facts.createdLaunches.filter(

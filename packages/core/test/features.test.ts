@@ -6,6 +6,7 @@ import {
   holdQuality,
   marketQuality,
 } from '../src/index.js';
+import type { WalletFacts } from '../src/index.js';
 import { DAY, HOUR, SPARK, T0, drop, launch, position, wallet } from './fixtures.js';
 
 const sum = (f: { components: { value: number }[] }) => f.components.reduce((s, c) => s + c.value, 0);
@@ -107,6 +108,17 @@ describe('alignment (A)', () => {
     expect(at(50_000n)).toBe('SPARK_50K');
     expect(at(200_000n)).toBe('SPARK_200K');
     expect(at(5_000_000n)).toBe('SPARK_1M');
+  });
+
+  it('rewards Chog Genesis holders, more for long holds, only for Chogs held by the launch time', () => {
+    const codes = (chog: WalletFacts['chog']) => alignment(wallet(1, { chog }), launch(), cfg).components.map((c) => c.code);
+    expect(codes({ tokens: 1, heldSince: T0 - 3 * DAY })).toEqual(['CHOG_HOLDER']);
+    expect(codes({ tokens: 2, heldSince: T0 - 30 * DAY })).toEqual(['CHOG_HOLDER', 'CHOG_LONG_HOLD']);
+    expect(codes({ tokens: 1 })).toEqual(['CHOG_HOLDER']);
+    expect(codes({ tokens: 1, heldSince: T0 + 1 })).toEqual([]);
+    expect(codes({ tokens: 0, chogBalance: 10n ** 24n })).toEqual([]);
+    expect(codes(undefined)).toEqual([]);
+    expect(alignment(wallet(1, { chog: { tokens: 1, heldSince: T0 - 60 * DAY } }), launch(), cfg).value).toBeCloseTo(0.1 + 0.05);
   });
 
   it('rewards charged Vibers, guilds and shipping; punishes rugs', () => {

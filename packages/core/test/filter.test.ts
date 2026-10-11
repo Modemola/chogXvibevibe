@@ -8,6 +8,7 @@ const base: WalletFields = {
   guild_ids: ['alpha'], scout_drops_received: 2, last_drop_sold_1h: 0, markets_traded: 5,
   stock_pair_markets: 3, stock_pair_share: 0.6, graduated_positions: 2, held_substance_days_max: 20, created_launches: 1,
   shipped_substance: true, created_rug: false, cluster_size: 1, in_creator_cluster: false,
+  chog_holder: false, chog_count: 0, chog_held_days: 0, chog_balance: 0,
 };
 
 const ev = (src: string, over: Partial<WalletFields> = {}) => evaluateFilter(parseFilter(src), { ...base, ...over });

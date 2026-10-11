@@ -74,6 +74,16 @@ export interface ViberStatus {
   lastChargedAt?: Timestamp;
 }
 
+/** Chog Genesis NFT holdings on Monad (vibe/vibe × Chog). Same address, read from Monad mainnet. */
+export interface ChogStatus {
+  /** Chog Genesis NFTs held when last read. */
+  tokens: number;
+  /** When the wallet first received a Chog it still holds (unix seconds). */
+  heldSince?: Timestamp;
+  /** $CHOG balance in raw units (18 decimals), when read. */
+  chogBalance?: bigint;
+}
+
 export interface GuildMembership {
   id: string;
   goodStanding: boolean;
@@ -88,6 +98,8 @@ export interface WalletFacts {
   /** Raw SPARK balance (18 decimals) at the snapshot the caller chose. */
   sparkBalance: bigint;
   viber?: ViberStatus;
+  /** Chog Genesis holdings on Monad. Absent for wallets never read or holding none. */
+  chog?: ChogStatus;
   guilds: GuildMembership[];
   scoutDrops: DropOutcome[];
   positions: Position[];

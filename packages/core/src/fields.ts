@@ -35,6 +35,13 @@ export interface WalletFields {
   created_rug: boolean;
   cluster_size: number;
   in_creator_cluster: boolean;
+  /** Holds a Chog Genesis NFT on Monad (held by the launch's time). */
+  chog_holder: boolean;
+  chog_count: number;
+  /** Days the wallet has held a Chog, as of the launch's time. */
+  chog_held_days: number;
+  /** Whole $CHOG held on Monad. */
+  chog_balance: number;
 }
 
 export type FieldType = 'number' | 'boolean' | 'string[]';
@@ -64,6 +71,10 @@ export const FIELD_TYPES: Record<keyof WalletFields, FieldType> = {
   created_rug: 'boolean',
   cluster_size: 'number',
   in_creator_cluster: 'boolean',
+  chog_holder: 'boolean',
+  chog_count: 'number',
+  chog_held_days: 'number',
+  chog_balance: 'number',
 };
 
 export function computeFields(
@@ -91,6 +102,8 @@ export function computeFields(
 
   const charged = facts.viber?.lastChargedAt;
   const stockMarkets = positions.filter((p) => p.pairClass === 'stock').length;
+  const chog = facts.chog;
+  const chogHeld = !!chog && chog.tokens > 0 && (chog.heldSince === undefined || chog.heldSince <= asOf);
 
   return {
     score: scored.score,
@@ -122,5 +135,9 @@ export function computeFields(
     created_rug: facts.createdLaunches.some((c) => c.flaggedRug),
     cluster_size: cluster.size,
     in_creator_cluster: inCreatorCluster,
+    chog_holder: chogHeld,
+    chog_count: chogHeld ? chog!.tokens : 0,
+    chog_held_days: chogHeld && chog!.heldSince !== undefined ? Math.floor((asOf - chog!.heldSince) / DAY) : 0,
+    chog_balance: chog?.chogBalance !== undefined ? toWhole(chog.chogBalance, 18) : 0,
   };
 }

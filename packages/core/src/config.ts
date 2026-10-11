@@ -46,6 +46,11 @@ export interface ScoringConfig {
     guildGoodStanding: number;
     shippedSubstance: number;
     creatorRug: number;
+    /** Holding a Chog Genesis NFT (vibe/vibe × Chog). */
+    chogHolder: number;
+    /** Extra for holding one for at least chogLongHoldDays. */
+    chogLongHold: number;
+    chogLongHoldDays: number;
   };
 
   dump: {
@@ -118,6 +123,9 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     guildGoodStanding: 0.1,
     shippedSubstance: 0.2,
     creatorRug: -0.3,
+    chogHolder: 0.1,
+    chogLongHold: 0.05,
+    chogLongHoldDays: 30,
   },
 
   dump: {

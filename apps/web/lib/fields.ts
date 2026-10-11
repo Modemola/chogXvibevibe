@@ -26,4 +26,8 @@ export const FIELD_DOCS: Record<keyof WalletFields, string> = {
   created_rug: 'Created a launch flagged as a rug',
   cluster_size: 'Wallets treated as the same person (declared + detected)',
   in_creator_cluster: "In the launch creator's cluster (always excluded)",
+  chog_holder: 'Holds a Chog Genesis NFT on Monad (same address)',
+  chog_count: 'Chog Genesis NFTs held on Monad',
+  chog_held_days: 'Days the wallet has held a Chog (since Scout first saw it)',
+  chog_balance: 'Whole $CHOG held on Monad',
 };
