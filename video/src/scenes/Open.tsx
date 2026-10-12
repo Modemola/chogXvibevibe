@@ -1,7 +1,8 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Backdrop } from '../components/Backdrop';
 import { Orb, unitPx } from '../components/Orb';
-import { Headline, Line } from '../components/Type';
+import { Headline, Kicker, Line } from '../components/Type';
+import { useEdition } from '../edition';
 import { C, F, clamp, expoOut, lerp, ramp, softInOut } from '../theme';
 
 /** Orb radius in world units for a frame, sized from the shorter side. */
@@ -16,6 +17,7 @@ export function Open() {
   const px = unitPx(height);
   const R = orbRadius(width, height);
   const portrait = height > width;
+  const chog = useEdition() === 'chog';
 
   // Fall: gravity ease-in from above the frame to the centre.
   const fall = interpolate(t, [1.2, 3.4], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.in(Easing.quad) });
@@ -80,6 +82,11 @@ export function Open() {
               Airdrops for the ones who stay.
             </Line>
           </div>
+          {chog && (
+            <div style={{ opacity: ramp(t, 10.4, 11.4) * (1 - ramp(t, 12.4, 13.2)), marginTop: 6 * u }}>
+              <Kicker size={28 * u} color={C.ink}>Chogathon · vibe/vibe × Chog</Kicker>
+            </div>
+          )}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

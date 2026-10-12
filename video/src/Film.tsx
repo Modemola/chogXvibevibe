@@ -4,6 +4,7 @@ import { useFonts } from './components/Fonts';
 import { Headline, Kicker } from './components/Type';
 import { Aftermath } from './scenes/Aftermath';
 import { Builder } from './scenes/Builder';
+import { Chog } from './scenes/Chog';
 import { Close } from './scenes/Close';
 import { Idea } from './scenes/Idea';
 import { OnChain } from './scenes/OnChain';
@@ -11,6 +12,7 @@ import { Open } from './scenes/Open';
 import { Problem } from './scenes/Problem';
 import { Score } from './scenes/Score';
 import { Sybil } from './scenes/Sybil';
+import { Edition } from './edition';
 import { C, F, ramp, s, softInOut } from './theme';
 
 const SCENES: { from: number; to: number; C: () => React.ReactNode }[] = [
@@ -25,11 +27,14 @@ const SCENES: { from: number; to: number; C: () => React.ReactNode }[] = [
   { from: 170, to: 180, C: Close },
 ];
 
-function Scenes() {
+/** The Chog edition: the same film with Chog in the sybil scene's slot, so timing and score are unchanged. */
+const CHOG_SCENES = SCENES.map((x) => (x.C === Sybil ? { ...x, C: Chog } : x));
+
+function Scenes({ list = SCENES }: { list?: typeof SCENES }) {
   useFonts();
   return (
     <>
-      {SCENES.map(({ from, to, C: Scene }) => (
+      {list.map(({ from, to, C: Scene }) => (
         <Sequence key={from} from={s(from)} durationInFrames={s(to - from)}>
           <Scene />
         </Sequence>
@@ -46,6 +51,18 @@ export function Film() {
       <Scenes />
       <Audio src={staticFile('score.wav')} volume={0.8} />
     </AbsoluteFill>
+  );
+}
+
+/** The 3:00 film for the Chogathon (vibe/vibe × Chog), 1920×1080 at 60 fps. */
+export function FilmChog() {
+  return (
+    <Edition.Provider value="chog">
+      <AbsoluteFill style={{ background: C.bg }}>
+        <Scenes list={CHOG_SCENES} />
+        <Audio src={staticFile('score.wav')} volume={0.8} />
+      </AbsoluteFill>
+    </Edition.Provider>
   );
 }
 

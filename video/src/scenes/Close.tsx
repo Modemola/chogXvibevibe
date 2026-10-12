@@ -1,8 +1,10 @@
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Backdrop } from '../components/Backdrop';
 import { Canvas } from '../components/Canvas';
 import { Orb, unitPx } from '../components/Orb';
 import { Headline, Kicker } from '../components/Type';
+import chogs from '../data/chog.json';
+import { useEdition } from '../edition';
 import { C, F, clamp, lerp, ramp, rng, softInOut } from '../theme';
 import { flywheel } from './Aftermath';
 import { orbRadius } from './Open';
@@ -19,6 +21,7 @@ export function Close() {
   const px = unitPx(height);
   const R = orbRadius(width, height) * 0.9;
   const fw = flywheel(width, height, u);
+  const chog = useEdition() === 'chog';
   const form = interpolate(t, [0.5, 2.6], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.34, 1.3, 0.5, 1) });
   const card = ramp(t, 5.2, 6.4, softInOut);
   const startY = (height / 2 - fw.y) / px;
@@ -63,7 +66,16 @@ export function Close() {
       {/* End card */}
       <div style={{ position: 'absolute', left: 0, width, top: height * 0.56, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22 * u, opacity: card, transform: `translateY(${(1 - card) * 30 * u}px)` }}>
         <Headline text="Graduation *Scout*" t={t} at={5.4} size={128 * u} align="center" stagger={0.14} dur={1.3} />
-        <div style={{ opacity: ramp(t, 6.0, 6.9), fontFamily: F.sans, fontWeight: 300, fontSize: 34 * u, color: C.body }}>built for vibe/vibe on Robinhood Chain</div>
+        <div style={{ opacity: ramp(t, 6.0, 6.9), fontFamily: F.sans, fontWeight: 300, fontSize: 34 * u, color: C.body }}>
+          {chog ? 'built for the Chogathon · vibe/vibe × Chog' : 'built for vibe/vibe on Robinhood Chain'}
+        </div>
+        {chog && (
+          <div style={{ display: 'flex', gap: 14 * u, marginTop: 6 * u }}>
+            {(chogs as { token: number; file: string }[]).slice(0, 5).map((c, i) => (
+              <Img key={c.token} src={staticFile(c.file)} style={{ width: 64 * u, height: 64 * u, borderRadius: 14 * u, border: `1px solid ${C.stroke}`, opacity: ramp(t, 6.3 + i * 0.1, 7.0 + i * 0.1) }} />
+            ))}
+          </div>
+        )}
         <div style={{ opacity: ramp(t, 6.2, 7.0), marginTop: 10 * u }}>
           <Kicker size={30 * u} color={C.ink} style={{ letterSpacing: '0.08em', textTransform: 'none' }}>
             graduation-scout.vercel.app
