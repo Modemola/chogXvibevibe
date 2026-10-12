@@ -41,6 +41,21 @@ Other scene changes are match cuts too: the dive into the signed wallet becomes 
 cluster becomes the first node group of the sybil scene. The retention curve becomes the flywheel, which collapses
 into the orb.
 
+## Chog edition (Chogathon)
+
+`FilmChog` is the same 3:00 film made for the Chogathon (vibe/vibe × Chog). The sybil scene's 20 s slot (1:35–1:55)
+holds a Chog scene instead (`src/scenes/Chog.tsx`): real Chog Genesis cards, the same wallet read on Monad, the
++0.10 / +0.05 score boost, and the Chog Holders recipe (60 / 25 / 15). The open and the end card carry the Chogathon
+credit. Timing and the score are unchanged, so every music cue still lands.
+
+```bash
+NODE_USE_ENV_PROXY=1 node scripts/chog-art.mjs     # tokenURI on Monad → metadata → art, into public/chog/
+node scripts/render.mjs FilmChog out/graduation-scout-film-chog.mp4
+```
+
+The Chog Genesis artwork belongs to its creators; it is fetched from the collection's own metadata
+(`0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763` on Monad) and used to show the integration, not to imply endorsement.
+
 ## Where the numbers come from
 
 Nothing on screen is invented.

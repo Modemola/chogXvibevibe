@@ -112,7 +112,7 @@ export function Chog() {
         })}
 
         {/* Phase B: Monad → Scout */}
-        <div style={{ position: 'absolute', left: leftX - card / 2, top: midY + card * 0.62 + 18 * u, width: card, textAlign: 'center', opacity: gather * (1 - phaseC) }}>
+        <div style={{ position: 'absolute', left: leftX - card / 2, top: midY + 236 * u, width: card, textAlign: 'center', opacity: gather * (1 - phaseC) }}>
           <Kicker size={22 * u} style={{ justifyContent: 'center' }}>Monad mainnet</Kicker>
         </div>
         <svg width={width} height={height} style={{ position: 'absolute', inset: 0, opacity: link }}>
