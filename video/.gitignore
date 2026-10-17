@@ -2,3 +2,4 @@ node_modules/
 out/
 public/score.wav
 public/pulse-*.wav
+public/chog-tune.wav
