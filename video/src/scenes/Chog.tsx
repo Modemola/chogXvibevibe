@@ -5,7 +5,7 @@ import chogs from '../data/chog.json';
 import { C, F, clamp, expoOut, lerp, ramp, softInOut, softOut, vis } from '../theme';
 
 /** Chog Genesis art, read from the NFT's tokenURI on Monad (see scripts/chog-art.mjs). */
-const CARDS = chogs as { token: number; file: string }[];
+const CARDS = (chogs as { token: number; file: string }[]).slice(0, 5);
 
 const RECIPE = [
   { pct: 60, label: 'Chogs who don’t dump', at: 13.4 },

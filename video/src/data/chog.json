@@ -28,5 +28,47 @@
     "tokenId": 1969,
     "file": "chog/1969.webp",
     "name": "CHOG #1461"
+  },
+  {
+    "token": 1468,
+    "tokenId": 7,
+    "file": "chog/7.webp",
+    "name": "CHOG #1468"
+  },
+  {
+    "token": 1530,
+    "tokenId": 69,
+    "file": "chog/69.webp",
+    "name": "CHOG #1530"
+  },
+  {
+    "token": 1561,
+    "tokenId": 100,
+    "file": "chog/100.webp",
+    "name": "CHOG #1561"
+  },
+  {
+    "token": 1794,
+    "tokenId": 333,
+    "file": "chog/333.webp",
+    "name": "CHOG #1794"
+  },
+  {
+    "token": 380,
+    "tokenId": 888,
+    "file": "chog/888.webp",
+    "name": "CHOG #380"
+  },
+  {
+    "token": 726,
+    "tokenId": 1234,
+    "file": "chog/1234.webp",
+    "name": "CHOG #726"
+  },
+  {
+    "token": 992,
+    "tokenId": 1500,
+    "file": "chog/1500.webp",
+    "name": "CHOG #992"
   }
 ]
