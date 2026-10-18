@@ -121,24 +121,26 @@ export function Sky({ glow = P.monad, t, warm = 0 }: { glow?: string; t: number;
           }}
         />
       ))}
-      {BUBBLES.map((b, i) => {
-        const y = 1.15 - ((t * b.sp + b.p) % 1.3);
-        return (
-          <div
-            key={`b${i}`}
-            style={{
-              position: 'absolute',
-              left: `${b.x * 100}%`,
-              top: `${y * 100}%`,
-              width: b.s,
-              height: b.s,
-              borderRadius: 999,
-              background: `radial-gradient(circle at 32% 30%, rgba(255,255,255,0.10), transparent 22%)`,
-              border: `2px solid ${b.hue > 0.5 ? P.pink : P.lilac}33`,
-            }}
-          />
-        );
-      })}
+      <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
+        <defs>
+          <radialGradient id="bubble-hi" cx="0.32" cy="0.3" r="0.3">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.12" />
+            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {BUBBLES.map((b, i) => {
+          const y = 1.15 - ((t * b.sp + b.p) % 1.3);
+          const r = b.s / 2;
+          const cx = b.x * 1920 + r;
+          const cy = y * 1080 + r;
+          return (
+            <g key={i}>
+              <circle cx={cx} cy={cy} r={r} fill="url(#bubble-hi)" />
+              <circle cx={cx} cy={cy} r={r - 1} fill="none" stroke={b.hue > 0.5 ? P.pink : P.lilac} strokeOpacity={0.2} strokeWidth={2} />
+            </g>
+          );
+        })}
+      </svg>
     </AbsoluteFill>
   );
 }

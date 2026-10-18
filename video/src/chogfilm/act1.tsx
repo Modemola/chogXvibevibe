@@ -152,7 +152,7 @@ export function Problem() {
           </div>
         );
       })}
-      <div style={{ position: 'absolute', left: 1100, top: 300, opacity: out(t, 9.2, 9.8) * (1 - out(t, 14, 14.4)) }}>
+      <div style={{ position: 'absolute', left: 1100, top: 300, opacity: out(t, 9.2, 9.8) * (1 - out(t, 11.1, 11.5)) }}>
         <Pill bg="#8c86a6" color="#fff" size={30}>copy-paste farm wallets</Pill>
       </div>
 
