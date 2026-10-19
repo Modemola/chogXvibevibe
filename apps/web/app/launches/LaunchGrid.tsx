@@ -98,7 +98,7 @@ export function LaunchGrid({ launches }: { launches: LaunchRow[] }) {
                     <dt>Created</dt>
                     <dd className="muted">{date(l.createdAt)}</dd>
                     <dt>Scout drop</dt>
-                    <dd>{l.drops ? `${l.drops} wallets` : <span className="faint">–</span>}</dd>
+                    <dd>{l.drops ? `${l.drops} wallets` : <span className="faint">none</span>}</dd>
                   </dl>
                   <div className="row" style={{ marginTop: 'auto', paddingTop: 18 }}>
                     {l.drops > 0 && (

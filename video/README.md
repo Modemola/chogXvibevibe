@@ -1,9 +1,9 @@
 # Graduation Scout: the launch film
 
-A 3:00 motion-graphics film (1920×1080, 60 fps) and a 30-second teaser (1920×1080, with a 1080×1920 variant), built in code with
+A 3:00 motion graphics film (1920×1080, 60 fps) and a 30 second teaser (1920×1080, with a 1080×1920 variant), built in code with
 [Remotion](https://www.remotion.dev). Every frame is a pure function of time, so renders are deterministic.
 
-The film reuses the website's design: the silver-noir tokens, Instrument Serif / Inter Tight / JetBrains Mono, and the
+The film reuses the website's design: the silver noir tokens, Instrument Serif / Inter Tight / JetBrains Mono, and the
 mercury orb shader from `apps/web/components/three/HeroScene.tsx` (here driven by frame time instead of a render loop).
 
 ## Run it
@@ -28,11 +28,11 @@ GPU. Renders go to `out/`, which is not committed.
 | --- | --- | --- |
 | 0:00 | Cold open: a droplet becomes the mercury orb; title | `src/scenes/Open.tsx` |
 | 0:15 | The problem: the orb shatters into wallets; farms cluster; dumpers flee; the price collapses | `src/scenes/Problem.tsx` |
-| 0:40 | The idea: time freezes into a grid; Opt-in · Explainable · Accountable; a wallet signs | `src/scenes/Idea.tsx` |
+| 0:40 | The idea: time freezes into a grid; Opt in · Explainable · Accountable; a wallet signs | `src/scenes/Idea.tsx` |
 | 1:05 | The score: the formula builds; reason codes stack into each wallet's exact score | `src/scenes/Score.tsx` |
 | 1:35 | Sybil defence: pull back from the cluster; exchange hubs ignored; farms fall through the sieve | `src/scenes/Sybil.tsx` |
 | 1:55 | Creators design the drop: the live builder in a glass frame; the policy hash locks | `src/scenes/Builder.tsx` |
-| 2:15 | On-chain, for real: Merkle tree → ScoutDrop on Robinhood Chain testnet → 184 wallets paid | `src/scenes/OnChain.tsx` |
+| 2:15 | On chain, for real: Merkle tree → ScoutDrop on Robinhood Chain testnet → 184 wallets paid | `src/scenes/OnChain.tsx` |
 | 2:35 | Aftermath: recipients drain or hold over 1h → 30d; the curve becomes the flywheel | `src/scenes/Aftermath.tsx` |
 | 2:50 | Close: everything collapses into the orb; end card | `src/scenes/Close.tsx` |
 
@@ -43,7 +43,7 @@ into the orb.
 
 ## Chog edition (Chogathon)
 
-`FilmChog` is the same 3:00 film made for the Chogathon (vibe/vibe × Chog). The sybil scene's 20 s slot (1:35–1:55)
+`FilmChog` is the same 3:00 film made for the Chogathon (vibe/vibe × Chog). The sybil scene's 20 s slot (1:35 to 1:55)
 holds a Chog scene instead (`src/scenes/Chog.tsx`): real Chog Genesis cards, the same wallet read on Monad, the
 +0.10 / +0.05 score boost, and the Chog Holders recipe (60 / 25 / 15). The open and the end card carry the Chogathon
 credit. Timing and the score are unchanged, so every music cue still lands.
@@ -81,7 +81,7 @@ for social feeds and cut to the picture.
   on the end card.
 - **Film** (`node scripts/pulse.mjs public/pulse-film.wav film`): one chord per scene; falling sweeps as dumpers flee,
   the price collapses and farms drop through the sieve; a calm arpeggio for the idea; the loudest pass for the
-  on-chain payout; the heartbeat again in the aftermath; a breath of silence before the final line.
+  on chain payout; the heartbeat again in the aftermath; a breath of silence before the final line.
 
 The finished videos carry this score (muxed in with ffmpeg). `scripts/score.mjs` is the earlier, quieter ambient
 score that the compositions still reference as `public/score.wav`. There is no voiceover.

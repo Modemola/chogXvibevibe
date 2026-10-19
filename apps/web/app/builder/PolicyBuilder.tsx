@@ -463,7 +463,7 @@ export default function PolicyBuilder({
                 </div>
                 <div className="tiny faint mono hashes" style={{ gridColumn: '1 / -1' }}>
                   <div>policy {preview.policyHash}</div>
-                  <div>merkle {preview.merkleRoot ?? '–'}</div>
+                  <div>merkle {preview.merkleRoot ?? 'none'}</div>
                 </div>
               </div>
             </div>

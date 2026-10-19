@@ -115,8 +115,8 @@ export default async function ChogPage() {
                         </Link>
                       </td>
                       <td className="num">{h.tokens}</td>
-                      <td className="num mono">{h.chogBalance > 0n ? tokens(h.chogBalance, 0) : '–'}</td>
-                      <td className="num faint" style={{ whiteSpace: 'nowrap' }}>{h.heldSince ? date(h.heldSince).slice(0, 10) : '–'}</td>
+                      <td className="num mono">{h.chogBalance > 0n ? tokens(h.chogBalance, 0) : 'none'}</td>
+                      <td className="num faint" style={{ whiteSpace: 'nowrap' }}>{h.heldSince ? date(h.heldSince).slice(0, 10) : 'none'}</td>
                     </tr>
                   ))}
                 </tbody>

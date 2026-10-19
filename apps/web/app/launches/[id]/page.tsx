@@ -149,7 +149,7 @@ export default async function AftermathPage({ params }: { params: Promise<{ id: 
                         const v = r.sold[w];
                         return (
                           <td key={w} className={`num mono ${v === undefined ? 'faint' : v >= 9_000 ? 'neg' : v < 1_000 ? 'pos' : ''}`}>
-                            {v === undefined ? '–' : pct(v / 10_000, 0)}
+                            {v === undefined ? 'none' : pct(v / 10_000, 0)}
                           </td>
                         );
                       })}

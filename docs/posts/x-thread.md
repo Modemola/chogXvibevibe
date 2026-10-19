@@ -18,7 +18,7 @@ So I built Graduation Scout. It pays the holders who stay. And now it knows your
 **2/**
 The idea is simple. When a token graduates, Scout decides who gets the airdrop.
 
-Every wallet gets a score from what it actually did on-chain. Held past earlier drops? Dumped in the first hour? Part of a farm?
+Every wallet gets a score from what it actually did on chain. Held past earlier drops? Dumped in the first hour? Part of a farm?
 
 Every score shows its reasons. No black box.
 
@@ -56,7 +56,7 @@ Here's a real drop.
 
 $SCOUT graduated on vibe/vibe and Scout paid its airdrop: 8.93M SCOUT to 183 wallets on Robinhood Chain testnet.
 
-The Merkle root on-chain matches the list Scout published. Anyone can check who got what, and why.
+The Merkle root on chain matches the list Scout published. Anyone can check who got what, and why.
 
 https://explorer.testnet.chain.robinhood.com/tx/0xf13bd23a93964ec9ab7aded3773a573adfbe3c89ef6ef71ed82d45554018699c
 
@@ -90,6 +90,6 @@ Built for the #Chogathon, [vibe/vibe handle] × [Chog handle], with Claude Code.
 
 Try it: https://graduation-scout.vercel.app
 Chog: https://graduation-scout.vercel.app/chog
-Code: https://github.com/Modemola/vibevibe
+Code: https://github.com/Modemola/chogXvibevibe
 $SCOUT: https://testnet.vibevibe.fun/token/0x0a272E5eE3F48c668ccF30E65E7738099AE0a1DE
 Demo: [demo video]

@@ -237,7 +237,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                             const v = d.sold[w];
                             return (
                               <td key={w} className={`num mono ${v === undefined ? 'faint' : v >= 9_000 ? 'neg' : v < 1_000 ? 'pos' : ''}`}>
-                                {v === undefined ? '–' : pct(v / 10_000, 0)}
+                                {v === undefined ? 'none' : pct(v / 10_000, 0)}
                               </td>
                             );
                           })}
@@ -290,9 +290,9 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                   {tokens(p.sparkBalance, 0)} <span className="faint">· tier {p.fields.spark_tier}</span>
                 </dd>
                 <dt>Vibe Viber</dt>
-                <dd>{p.viber ? `level ${p.viber.level}${p.fields.viber_charged ? ' · charged' : ''}` : '–'}</dd>
+                <dd>{p.viber ? `level ${p.viber.level}${p.fields.viber_charged ? ' · charged' : ''}` : 'none'}</dd>
                 <dt>Guilds</dt>
-                <dd>{p.guilds.length ? p.guilds.map((g) => g.id).join(', ') : '–'}</dd>
+                <dd>{p.guilds.length ? p.guilds.map((g) => g.id).join(', ') : 'none'}</dd>
                 <dt>Chog Genesis</dt>
                 <dd>
                   {p.chog && p.chog.tokens > 0 ? (
@@ -301,11 +301,11 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
                       {p.chog.heldSince ? <span className="faint"> · seen since {date(p.chog.heldSince)}</span> : null}
                     </>
                   ) : (
-                    '–'
+                    'none'
                   )}
                 </dd>
                 <dt>$CHOG</dt>
-                <dd className="mono">{p.chog?.chogBalance ? tokens(p.chog.chogBalance, 0) : '–'}</dd>
+                <dd className="mono">{p.chog?.chogBalance ? tokens(p.chog.chogBalance, 0) : 'none'}</dd>
                 <dt>Markets traded</dt>
                 <dd>
                   {p.fields.markets_traded} <span className="faint">· {p.fields.stock_pair_markets} stock-paired</span>
