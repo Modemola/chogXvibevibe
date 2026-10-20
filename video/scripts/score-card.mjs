@@ -1,5 +1,5 @@
 // Renders a 10 s personal score clip for one wallet, from its live Scout profile.
-// Usage: NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs <wallet> [--out file.mp4] [--no-music] [--refresh]
+// Usage: NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs <wallet> [--out file.mp4] [--no-music] [--refresh] [--props-only]
 // Reads the profile from the live site (which also reads the wallet's Chogs from Monad), finds which Chog Genesis
 // tokens the wallet owns (ownerOf over all 1,969, cached), fetches their art from the collection's metadata, renders.
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -116,6 +116,9 @@ const props = {
   music: !flag('--no-music'),
 };
 console.log(JSON.stringify({ ...props, owned: owned.length }, null, 2));
+mkdirSync('out/cards', { recursive: true });
+writeFileSync(`out/cards/score-${short}.json`, JSON.stringify(props, null, 2));
+if (flag('--props-only')) process.exit(0);
 
 // 5. Render.
 const browserExecutable = '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';

@@ -99,3 +99,11 @@ The script reads `/api/profiles/<wallet>` from the live site, finds the wallet's
 over all 1,969 (cached for six hours in `.cache/`), and fetches their art from each token's metadata. Wallets that
 have not joined get a clip marked "preview · join to be eligible". Only render clips for wallets their owners
 asked for.
+
+For the kick off post, `score-reel.mjs` joins two saved cards into one 25 second reel with a title and a call to reply:
+
+```bash
+NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs 0xA… --props-only    # saves out/cards/score-<wallet>.json
+NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs 0xB… --props-only
+node scripts/score-reel.mjs out/cards/score-<A>.json out/cards/score-<B>.json   # writes out/cards/score-reel.mp4
+```
