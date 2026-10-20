@@ -85,3 +85,17 @@ for social feeds and cut to the picture.
 
 The finished videos carry this score (muxed in with ffmpeg). `scripts/score.mjs` is the earlier, quieter ambient
 score that the compositions still reference as `public/score.wav`. There is no voiceover.
+
+## Personal score clips
+
+A 10 second clip (1080×1350, 4:5) for one wallet, built from its live Scout profile: the wallet, its own Chogs read
+from Monad, its score with the top reasons, and the recipes that would pay it.
+
+```bash
+NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs 0x…        # writes out/cards/score-<wallet>.mp4
+```
+
+The script reads `/api/profiles/<wallet>` from the live site, finds the wallet's Chog Genesis tokens with `ownerOf`
+over all 1,969 (cached for six hours in `.cache/`), and fetches their art from each token's metadata. Wallets that
+have not joined get a clip marked "preview · join to be eligible". Only render clips for wallets their owners
+asked for.

@@ -101,6 +101,7 @@ const BUBBLES = Array.from({ length: 16 }, () => ({ x: r0(), s: 40 + r0() * 120,
 
 /** Deep Monad-purple sky with twinkling stars, soft glows and drifting bubbles. */
 export function Sky({ glow = P.monad, t, warm = 0 }: { glow?: string; t: number; warm?: number }) {
+  const { width: W, height: H } = useVideoConfig();
   return (
     <AbsoluteFill style={{ background: `linear-gradient(180deg, ${P.night} 0%, ${P.deep} 60%, #3b2378 100%)`, overflow: 'hidden' }}>
       <AbsoluteFill style={{ background: `radial-gradient(55% 45% at 50% 18%, ${glow}55, transparent 70%)` }} />
@@ -121,7 +122,7 @@ export function Sky({ glow = P.monad, t, warm = 0 }: { glow?: string; t: number;
           }}
         />
       ))}
-      <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', inset: 0 }}>
         <defs>
           <radialGradient id="bubble-hi" cx="0.32" cy="0.3" r="0.3">
             <stop offset="0" stopColor="#ffffff" stopOpacity="0.12" />
@@ -131,8 +132,8 @@ export function Sky({ glow = P.monad, t, warm = 0 }: { glow?: string; t: number;
         {BUBBLES.map((b, i) => {
           const y = 1.15 - ((t * b.sp + b.p) % 1.3);
           const r = b.s / 2;
-          const cx = b.x * 1920 + r;
-          const cy = y * 1080 + r;
+          const cx = b.x * W + r;
+          const cy = y * H + r;
           return (
             <g key={i}>
               <circle cx={cx} cy={cy} r={r} fill="url(#bubble-hi)" />

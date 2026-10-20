@@ -3,3 +3,5 @@ out/
 public/score.wav
 public/pulse-*.wav
 public/chog-tune.wav
+public/cards/
+.cache/
