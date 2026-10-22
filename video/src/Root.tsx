@@ -3,6 +3,7 @@ import { Film, FilmChog, Teaser } from './Film';
 import { Logo } from './Logo';
 import { ChogFilm } from './chogfilm/ChogFilm';
 import { Cover } from './chogfilm/Cover';
+import { FarmPuzzle, FarmReveal } from './chogfilm/Farm';
 import { SAMPLE_CARD, ScoreCard } from './chogfilm/ScoreCard';
 import { REEL_SECONDS, SAMPLE_REEL, ScoreReel } from './chogfilm/ScoreReel';
 import { FPS } from './theme';
@@ -16,6 +17,8 @@ export function Root() {
       <Composition id="Cover" component={Cover} durationInFrames={1} fps={30} width={1920} height={960} />
       <Composition id="ScoreCard" component={ScoreCard} durationInFrames={10 * 30} fps={30} width={1080} height={1350} defaultProps={SAMPLE_CARD} />
       <Composition id="ScoreReel" component={ScoreReel} durationInFrames={REEL_SECONDS * 30} fps={30} width={1080} height={1350} defaultProps={SAMPLE_REEL} />
+      <Composition id="FarmPuzzle" component={FarmPuzzle} durationInFrames={15 * 30} fps={30} width={1080} height={1350} />
+      <Composition id="FarmReveal" component={FarmReveal} durationInFrames={16 * 30} fps={30} width={1080} height={1350} />
       <Composition id="Teaser" component={Teaser} durationInFrames={30 * FPS} fps={FPS} width={1920} height={1080} />
       <Composition id="TeaserVertical" component={Teaser} durationInFrames={30 * FPS} fps={FPS} width={1080} height={1920} />
       <Composition id="Logo" component={Logo} durationInFrames={1} fps={FPS} width={1024} height={1024} defaultProps={{ ring: true }} />

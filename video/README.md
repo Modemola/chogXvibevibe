@@ -107,3 +107,17 @@ NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs 0xA… --props-only    # saves 
 NODE_USE_ENV_PROXY=1 node scripts/score-card.mjs 0xB… --props-only
 node scripts/score-reel.mjs out/cards/score-<A>.json out/cards/score-<B>.json   # writes out/cards/score-reel.mp4
 ```
+
+## Spot the farm
+
+A puzzle and its reveal (1080×1350). Twelve wallets buy on a shared timeline (`src/data/farm.json`); three of them
+always buy in the same instant. The puzzle freezes on "Which 3 are one person?" and the reveal replays it at double
+speed, links the three and merges them into one.
+
+```bash
+node scripts/farm-audio.mjs                                   # soundtracks with a pop on every buy
+node scripts/render.mjs FarmPuzzle out/cards/FarmPuzzle.mp4
+node scripts/render.mjs FarmReveal out/cards/FarmReveal.mp4
+```
+
+To run it again with a different answer, change `farm` and the events in `src/data/farm.json`.
