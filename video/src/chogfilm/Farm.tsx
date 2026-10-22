@@ -5,6 +5,7 @@ import { Coin, FONT, Orb, P, Pill, Sky, Sparkle, Title, clamp, ease, lerp, out, 
 const W = 1080;
 const FARM = new Set(farm.farm);
 const EVENTS = farm.events as { t: number; w: number[] }[];
+const FARM_BUYS = EVENTS.filter((e) => farm.farm.every((n) => e.w.includes(n))).length;
 const COLORS = ['#ffb3d9', '#b8a6ff', '#8fd3ff', '#7cf2c9', '#ffd94a', '#ffa98f', '#c8b8ff', '#a6f0ff', '#ffc2e6', '#d4ff8f', '#ffcf7a', '#9fb4ff'];
 
 /** Grid position of wallet n (1 to 12): four columns, three rows. */
@@ -66,12 +67,14 @@ function Grid({ t, timeScale = 1, offset = 0, frozenAt, ringFarm = 0, dimOthers 
         const k = pop(t, 0.25 + i * 0.07, { damping: 11 });
         const since = sinceBuy(n, tt, timeScale, offset);
         const [sx, sy] = since < 1 ? squash(0, -since, 0.2) : [1, 1];
-        const hop = since < 0.35 ? Math.sin((since / 0.35) * Math.PI) * 26 : 0;
+        const hop = since < 0.45 ? Math.sin((since / 0.45) * Math.PI) * 44 : 0;
+        const flash = since < 0.6 ? 1 - since / 0.6 : 0;
         const isFarm = FARM.has(n);
         return (
           <div key={n} style={{ position: 'absolute', left: x - 75, top: y - 75 - hop, transform: `scale(${k * sx}, ${k * sy})`, transformOrigin: '50% 100%' }}>
             <Wallet n={n} t={tt} frozen={frozenAt !== undefined && t >= frozenAt} ring={isFarm ? ringFarm : 0} dim={isFarm ? 0 : dimOthers} />
-            {since < 0.7 && <Coin size={46} spin={since * 12} style={{ position: 'absolute', left: 52, top: -30 - since * 90, opacity: 1 - since / 0.7 }} />}
+            {flash > 0 && <div style={{ position: 'absolute', inset: -14, borderRadius: 999, border: '7px solid #ffffff', opacity: flash, boxShadow: `0 0 36px #ffffff` }} />}
+            {since < 1.0 && <Coin size={54} spin={since * 10} style={{ position: 'absolute', left: 48, top: -36 - since * 70, opacity: 1 - since }} />}
           </div>
         );
       })}
@@ -79,15 +82,15 @@ function Grid({ t, timeScale = 1, offset = 0, frozenAt, ringFarm = 0, dimOthers 
   );
 }
 
-/** 15 s puzzle (1080×1350): three of twelve wallets are one person. */
+/** 22 s puzzle (1080×1350): three of twelve wallets are one person. */
 export function FarmPuzzle() {
   useAssets();
   const t = useT();
-  const freeze = 10.8;
+  const freeze = 16.6;
   const ask = out(t, freeze + 0.1, freeze + 0.5);
-  const countdown = Math.max(1, 3 - Math.floor(Math.max(0, t - 11.8)));
+  const countdown = Math.max(1, 3 - Math.floor(Math.max(0, t - 17.8)));
   return (
-    <AbsoluteFill style={{ opacity: Math.min(clamp(t / 0.15), 1 - out(t, 14.7, 15)) }}>
+    <AbsoluteFill style={{ opacity: Math.min(clamp(t / 0.15), 1 - out(t, 21.7, 22)) }}>
       <Sky t={t < freeze ? t : freeze} glow={P.pink} warm={0.6} />
       <div style={{ position: 'absolute', top: 60, width: W }}>
         <Title text="Spot the *farm.*" t={t} at={0.1} size={120} />
@@ -95,14 +98,14 @@ export function FarmPuzzle() {
       <div style={{ position: 'absolute', top: 210, width: W, textAlign: 'center', fontFamily: FONT.fun, fontWeight: 600, fontSize: 42, color: P.lilac, opacity: out(t, 0.8, 1.2) * (1 - ask) }}>
         3 of these 12 wallets are one person.
         <br />
-        Watch them buy.
+        Watch who buys at the same moment.
       </div>
       <Grid t={t} frozenAt={freeze} dimOthers={0} />
       <div style={{ position: 'absolute', top: 1110, width: W, textAlign: 'center', opacity: ask, transform: `scale(${0.8 + 0.2 * pop(t, freeze + 0.1)})` }}>
         <div style={{ fontFamily: FONT.fun, fontWeight: 700, fontSize: 64, color: '#fff', textShadow: `0 6px 0 ${P.night}` }}>Which 3 are one person?</div>
         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 16 }}>
           <Pill bg={P.butter} size={36}>reply with 3 numbers</Pill>
-          {t > 11.8 && <Pill bg="#fff" size={36}>{countdown}</Pill>}
+          {t > 17.8 && <Pill bg="#fff" size={36}>{countdown}</Pill>}
         </div>
       </div>
       <div style={{ position: 'absolute', top: 1290, width: W, textAlign: 'center', fontFamily: FONT.mono, fontSize: 22, color: '#ffffff88', opacity: ask }}>answer tomorrow · Graduation Scout × Chog</div>
@@ -115,9 +118,9 @@ export function FarmPuzzle() {
 export function FarmReveal() {
   useAssets();
   const t = useT();
-  const replayStart = 1.8; // the puzzle's events, twice as fast, starting here
-  const links = ease(t, 6.2, 7.0);
-  const ring = out(t, 6.0, 6.6);
+  const replayStart = 1.8; // the puzzle's events, three times as fast, starting here
+  const links = ease(t, 6.6, 7.4);
+  const ring = out(t, 6.4, 7.0);
   const merge = ease(t, 10.0, 11.4);
   const farmPts = [...FARM].map((n) => slot(n));
   const centre = { x: W / 2, y: 720 };
@@ -135,12 +138,12 @@ export function FarmReveal() {
       </div>
       {/* The grid fades out as the farm merges */}
       <div style={{ opacity: 1 - merge }}>
-        <Grid t={t} timeScale={2} offset={replayStart - 2.4} ringFarm={ring} dimOthers={ring} links={links} />
+        <Grid t={t} timeScale={3} offset={replayStart - 2.4} ringFarm={ring} dimOthers={ring} links={links} />
       </div>
       {/* Labels */}
-      <div style={{ position: 'absolute', top: 1170, width: W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, opacity: out(t, 7.0, 7.4) * (1 - merge) }}>
-        <Pill bg={P.red} color="#fff" size={36}>#4, #9, #11 bought in the same second, 6 times</Pill>
-        <div style={{ opacity: out(t, 7.8, 8.2) }}>
+      <div style={{ position: 'absolute', top: 1170, width: W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, opacity: out(t, 7.4, 7.8) * (1 - merge) }}>
+        <Pill bg={P.red} color="#fff" size={36}>#4, #9, #11 bought in the same second, {FARM_BUYS} times</Pill>
+        <div style={{ opacity: out(t, 8.2, 8.6) }}>
           <Pill bg="#fff" size={34}>Scout links them into one cluster</Pill>
         </div>
       </div>

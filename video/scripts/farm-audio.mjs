@@ -85,15 +85,15 @@ function write(file, { N, L, R }) {
 
 const panOf = (n) => (((n - 1) % 4) - 1.5) / 2;
 
-// Puzzle: 15 s. The groove plays under the buys, drops away at the freeze, then a three-tick countdown.
+// Puzzle: 22 s. The groove plays under the buys, drops away at the freeze, then a three-tick countdown.
 {
-  const a = track(15, 10, 0.6);
-  a.music(0, 10.8, (t) => 0.6 * Math.min(1, t / 0.3));
-  a.music(10.8, 15, (t) => 0.6 * Math.max(0, 1 - (t - 10.8) / 0.6) + 0.15);
+  const a = track(22, 10, 0.6);
+  a.music(0, 16.6, (t) => 0.55 * Math.min(1, t / 0.3));
+  a.music(16.6, 22, (t) => 0.55 * Math.max(0, 1 - (t - 16.6) / 0.6) + 0.12 * Math.min(1, (22 - t) / 0.5));
   for (const e of farm.events) for (const w of e.w) a.pop(e.t, 0.32, 1 + (w % 3) * 0.04, panOf(w));
-  a.ding(10.8, 880, 0.3);
-  for (const s of [11.8, 12.8, 13.8]) a.tick(s, 0.35);
-  a.ding(14.3, 1320, 0.2, 0.8);
+  a.ding(16.6, 880, 0.3);
+  for (const s of [17.8, 18.8, 19.8]) a.tick(s, 0.35);
+  a.ding(20.4, 1320, 0.2, 0.8);
   write('public/farm-puzzle.wav', a);
 }
 
@@ -101,9 +101,9 @@ const panOf = (n) => (((n - 1) % 4) - 1.5) / 2;
 {
   const a = track(16, 76, 0.55);
   a.music(0, 16, (t) => 0.55 * Math.min(1, t / 0.3) * Math.min(1, (16 - t) / 0.6));
-  for (const e of farm.events) for (const w of e.w) a.pop(1.8 + (e.t - 2.4) / 2, 0.28, 1 + (w % 3) * 0.04, panOf(w));
-  a.zap(6.2, 0.35);
-  a.ding(7.0, 660, 0.25);
+  for (const e of farm.events) for (const w of e.w) a.pop(1.8 + (e.t - 2.4) / 3, 0.28, 1 + (w % 3) * 0.04, panOf(w));
+  a.zap(6.6, 0.35);
+  a.ding(7.4, 660, 0.25);
   a.thud(11.2, 0.9);
   a.ding(11.3, 1320, 0.25);
   a.ding(13.0, 990, 0.2);
