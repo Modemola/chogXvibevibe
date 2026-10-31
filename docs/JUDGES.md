@@ -24,6 +24,7 @@ profile:
 Scout reads that wallet's Chog Genesis NFTs and $CHOG balance from Monad mainnet when the page loads (it holds 59
 Chogs). The profile shows:
 
+- the **Chog Passport**: every Chog the wallet holds, with its real art and number, and the first one as the avatar;
 - a **Chog holder** chip with the count;
 - the score with every reason that went into it, including **Holds a Chog Genesis NFT**;
 - the recipes the wallet qualifies for, with the Chog Holders recipe matching through its `chogs` bucket.

@@ -62,6 +62,8 @@ graduation, first seen just before the middle one, and first seen after the last
 that only Chogs held by then are paid as Chogs, and that only Chogs held for 30 days or more are paid as long time
 Chogs.
 
-With 248 simulated Chog holders, 30+ day holders averaged 5,000 tokens and newer holders 3,772. Per wallet caps still
-apply: with only a few holders, every Chog reaches the cap from the first bucket and the long hold extra appears once
-there are more holders than the cap lets the first bucket fill.
+It also gives every seventh profile 5,000 $CHOG and no Chog Genesis. At the last graduation, 44 Chog holders were
+paid, each at the 5,000 token per wallet cap, and 35 $CHOG only holders averaged 4,943 through the `chog_token`
+bucket. Chogs first seen after that graduation received nothing as Chogs. Per wallet caps still apply: with only a
+few holders, every Chog reaches the cap from the first bucket and the long hold extra appears once there are more
+holders than the cap lets the first bucket fill.

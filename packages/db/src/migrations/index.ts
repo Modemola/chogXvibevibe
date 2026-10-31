@@ -246,4 +246,19 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 7,
+    name: 'chog_tokens',
+    sql: `
+      -- Who owns each Chog Genesis token, read from Monad with ownerOf. meta is the number in the token's metadata
+      -- file name (token 1 is 1462.json), which is also the number of its artwork and the one shown as "Chog #n".
+      CREATE TABLE chog_tokens (
+        token_id    integer PRIMARY KEY,
+        owner       text NOT NULL,
+        meta        integer NOT NULL,
+        updated_at  bigint NOT NULL
+      );
+      CREATE INDEX chog_tokens_owner_idx ON chog_tokens (owner);
+    `,
+  },
 ];

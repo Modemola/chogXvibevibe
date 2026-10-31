@@ -1,6 +1,6 @@
 import { type Address, normalizeAddress } from '@scout/core';
-import { type Db, getChogStatus, saveChogStatus, type ChogStatusRecord } from '@scout/db';
-import { type PublicClient, createPublicClient, defineChain, erc20Abi, erc721Abi, http } from 'viem';
+import { type ChogToken, type Db, chogTokensUpdatedAt, getChogStatus, saveChogStatus, saveChogTokens, type ChogStatusRecord } from '@scout/db';
+import { type PublicClient, createPublicClient, defineChain, erc20Abi, erc721Abi, http, parseAbi } from 'viem';
 
 /** Chog on Monad mainnet. Scout only reads it: the same address holds Chogs on Monad and trades on vibe/vibe. */
 export const CHOG_MONAD = {
@@ -10,7 +10,13 @@ export const CHOG_MONAD = {
   nft: '0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763' as Address,
   /** $CHOG, ERC-20, 18 decimals. */
   token: '0x350035555e10d9afaf1566aaebfced5ba6c27777' as Address,
+  supply: 1969,
+  /** IPFS folder of the artwork; each image is named after its metadata number. */
+  artCid: 'bafybeihau2egcccbdxymeckmmbrqytbfor5gkt3en6d5fsbueymdbq7g6e',
 } as const;
+
+/** The artwork of the Chog whose metadata number is `meta`, through a public IPFS gateway. */
+export const chogArtUrl = (meta: number, gateway = 'https://gateway.pinata.cloud/ipfs/') => `${gateway}${CHOG_MONAD.artCid}/${meta}.webp`;
 
 export const monadChain = defineChain({
   id: CHOG_MONAD.chainId,
@@ -77,4 +83,50 @@ export async function syncChog(
     }
   }
   return { checked: stale.length, holders, changed, statuses };
+}
+
+const OWNERSHIP_ABI = parseAbi(['function ownerOf(uint256) view returns (address)', 'function tokenURI(uint256) view returns (string)']);
+
+/**
+ * Reads the owner and metadata number of every Chog Genesis token, 250 tokens per Multicall3 request (about two
+ * seconds for all 1,969). Tokens whose calls fail are left out; callers decide whether a partial read is enough.
+ */
+export async function readChogTokens(client: Pick<PublicClient, 'multicall'>, supply: number = CHOG_MONAD.supply): Promise<ChogToken[]> {
+  const out: ChogToken[] = [];
+  for (let start = 1; start <= supply; start += 250) {
+    const ids = Array.from({ length: Math.min(250, supply + 1 - start) }, (_, i) => start + i);
+    const r = await client.multicall({
+      allowFailure: true,
+      contracts: ids.flatMap((id) => [
+        { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'ownerOf', args: [BigInt(id)] } as const,
+        { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'tokenURI', args: [BigInt(id)] } as const,
+      ]),
+    });
+    ids.forEach((tokenId, j) => {
+      const owner = r[2 * j];
+      const uri = r[2 * j + 1];
+      if (owner?.status !== 'success' || uri?.status !== 'success') return;
+      const meta = Number(/\/(\d+)\.json$/.exec(String(uri.result))?.[1]);
+      if (!Number.isFinite(meta)) return;
+      out.push({ tokenId, owner: normalizeAddress(String(owner.result)), meta });
+    });
+  }
+  return out;
+}
+
+/**
+ * Refreshes the ownership snapshot when it is older than `maxAgeSec`. Stores it only when every token was read, so a
+ * partial read never makes a holder's Chogs disappear.
+ */
+export async function syncChogTokens(
+  db: Db,
+  opts: { client: Pick<PublicClient, 'multicall'>; now?: number; maxAgeSec?: number; supply?: number },
+): Promise<{ refreshed: boolean; tokens: number }> {
+  const now = opts.now ?? Math.floor(Date.now() / 1000);
+  const last = await chogTokensUpdatedAt(db);
+  if (last !== undefined && now - last < (opts.maxAgeSec ?? 0)) return { refreshed: false, tokens: 0 };
+  const tokens = await readChogTokens(opts.client, opts.supply);
+  if (tokens.length < (opts.supply ?? CHOG_MONAD.supply)) return { refreshed: false, tokens: tokens.length };
+  await saveChogTokens(db, tokens, now);
+  return { refreshed: true, tokens: tokens.length };
 }

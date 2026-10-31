@@ -220,6 +220,13 @@ export function alignment(facts: WalletFacts, launch: LaunchContext, config: Sco
     }
   }
 
+  // $CHOG on Monad. The balance is the latest reading, so it counts as of now rather than as of the launch.
+  if (chog?.chogBalance !== undefined) {
+    const whole = Number(chog.chogBalance / 10n ** 18n);
+    const tier = [...cfg.chogToken].sort((a, b) => b.min - a.min).find((x) => whole >= x.min);
+    if (tier) components.push({ code: tier.code, value: tier.value, detail: `holds ${whole.toLocaleString('en-US')} $CHOG` });
+  }
+
   const shipped = facts.createdLaunches.filter(
     (c) => SUBSTANCE_LANES.has(c.lane) && c.graduated && c.hasProductLinks && !c.flaggedRug,
   );

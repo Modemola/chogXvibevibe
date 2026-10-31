@@ -51,6 +51,8 @@ export interface ScoringConfig {
     /** Extra for holding one for at least chogLongHoldDays. */
     chogLongHold: number;
     chogLongHoldDays: number;
+    /** $CHOG tiers in whole tokens; the highest tier met counts. */
+    chogToken: { min: number; value: number; code: string }[];
   };
 
   dump: {
@@ -126,6 +128,10 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     chogHolder: 0.1,
     chogLongHold: 0.05,
     chogLongHoldDays: 30,
+    chogToken: [
+      { min: 1_000, value: 0.03, code: 'CHOG_TOKEN_1K' },
+      { min: 100_000, value: 0.06, code: 'CHOG_TOKEN_100K' },
+    ],
   },
 
   dump: {

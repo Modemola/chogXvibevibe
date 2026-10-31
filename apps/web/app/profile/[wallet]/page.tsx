@@ -71,7 +71,13 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
       />
 
       <Reveal>
-        <div className="wallet-title">{p.wallet}</div>
+        <div className="wallet-head">
+          {p.passport[0] && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="chog-avatar" src={p.passport[0].art} alt={`Chog #${p.passport[0].number}`} width={64} height={64} />
+          )}
+          <div className="wallet-title">{p.wallet}</div>
+        </div>
         <div className="row">
           {p.optedIn ? (
             <span className="chip good">
@@ -101,6 +107,35 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
           {p.cluster.sybilScore > 0 && <span className="chip bad">Sybil penalty {pct(p.cluster.sybilScore, 0)}</span>}
         </div>
       </Reveal>
+
+      {p.passport.length > 0 && (
+        <Reveal>
+          <section className="glass pad r-xl passport" style={{ marginTop: 24 }}>
+            <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <div className="kicker">Chog Passport · read from Monad</div>
+                <h3 style={{ margin: '10px 0 0' }}>
+                  {p.passport.length} Chog Genesis {p.passport.length === 1 ? 'NFT' : 'NFTs'}
+                  {p.chog?.heldSince ? <span className="faint small"> · held since {date(p.chog.heldSince).slice(0, 10)}</span> : null}
+                </h3>
+              </div>
+              <Link href="/chog" className="btn sm">
+                How Chogs score
+              </Link>
+            </div>
+            <div className="passport-grid">
+              {p.passport.slice(0, 12).map((c) => (
+                <figure key={c.tokenId} className="passport-chog">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.art} alt={`Chog #${c.number}`} width={160} height={160} loading="lazy" />
+                  <figcaption className="mono tiny">#{c.number}</figcaption>
+                </figure>
+              ))}
+              {p.passport.length > 12 && <div className="passport-more mono">+{p.passport.length - 12} more</div>}
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       <div className="split" style={{ marginTop: 28 }}>
         <div className="stack" style={{ gap: 20 }}>

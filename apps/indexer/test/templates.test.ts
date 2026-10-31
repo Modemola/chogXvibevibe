@@ -51,6 +51,7 @@ const RULES: Record<TemplateId, { buckets: Record<string, Rule>; allowed: Rule }
     buckets: {
       chogs: (f) => f.chog_holder && f.dump_score < 0.5,
       long_chogs: (f) => f.chog_held_days >= 30 && f.dump_score < 0.5,
+      chog_token: (f) => f.chog_balance >= 1000 && f.dump_score < 0.5,
       holders: (f) => f.scout_drops_received >= 1 && f.dump_score < 0.25 && f.hold_quality >= 0.5,
     },
     allowed: (f) => notSybil(f) && f.last_drop_sold_1h < 0.8 && !f.created_rug,
@@ -97,6 +98,14 @@ describe('templates resolve correctly at graduation', () => {
         profiles[i]!.wallet, 1 + (i % 3), heldSince, last,
       ]);
     }
+    // And some wallets hold $CHOG but no Chog Genesis, for the recipe's $CHOG share.
+    for (let i = 2; i < profiles.length; i += 7) {
+      await db.query(
+        `INSERT INTO chog_status (wallet, tokens, chog_balance, held_since, checked_at) VALUES ($1, 0, $2, NULL, $3)
+         ON CONFLICT (wallet) DO UPDATE SET chog_balance = EXCLUDED.chog_balance`,
+        [profiles[i]!.wallet, (5_000n * 10n ** 18n).toString(), last],
+      );
+    }
   }, 60_000);
   afterAll(async () => {
     await db.close();
@@ -140,6 +149,7 @@ describe('templates resolve correctly at graduation', () => {
     // By the last graduation two of the three Chog cohorts count, and the oldest is past 30 days.
     const { set } = await resolveAt('chog_holders', launchIds.at(-1)!);
     expect(set.buckets.find((b) => b.id === 'long_chogs')!.candidates).toBeGreaterThan(0);
+    expect(set.buckets.find((b) => b.id === 'chog_token')!.recipients).toBeGreaterThan(0);
   }, 120_000);
 
   for (const template of TEMPLATE_IDS) {

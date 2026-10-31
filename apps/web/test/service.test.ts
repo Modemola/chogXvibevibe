@@ -90,10 +90,19 @@ describe('ScoutService', () => {
     const D = normalizeAddress(chog.address);
     let reads = 0;
     const monad = {
-      async multicall({ contracts }: { contracts: readonly { args: readonly [string] }[] }) {
-        reads++;
-        // Every wallet asked about holds 2 Chog Genesis and 1,500 $CHOG.
-        return contracts.map((_, i) => (i % 2 === 0 ? 2n : 1_500n * 10n ** 18n));
+      async multicall({ contracts, allowFailure }: { contracts: readonly { functionName: string; args: readonly unknown[] }[]; allowFailure?: boolean }) {
+        if (contracts[0]?.functionName === 'balanceOf') {
+          reads++;
+          // Every wallet asked about holds 2 Chog Genesis and 1,500 $CHOG.
+          return contracts.map((_, i) => (i % 2 === 0 ? 2n : 1_500n * 10n ** 18n));
+        }
+        // The passport scan: D owns tokens 1 and 2, whose art is Chog #1462 and #7.
+        const out = contracts.map((c) => {
+          const id = Number(c.args[0]);
+          const result = c.functionName === 'ownerOf' ? (id <= 2 ? D : '0x000000000000000000000000000000000000dEaD') : `ipfs://cid/${id === 1 ? 1462 : id === 2 ? 7 : id + 3000}.json`;
+          return allowFailure ? { status: 'success', result } : result;
+        });
+        return out;
       },
     };
     const withChog = new ScoutService(db, { now: () => clock, cacheSec: 600, chogClient: monad as never });
@@ -107,8 +116,11 @@ describe('ScoutService', () => {
     expect(p.chog).toEqual({ tokens: 2, chogBalance: 1_500n * 10n ** 18n, heldSince: clock });
     expect(p.fields).toMatchObject({ chog_holder: true, chog_count: 2, chog_balance: 1_500 });
     expect(p.reasons.map((r) => r.code)).toContain('CHOG_HOLDER');
+    expect(p.passport.map((c) => c.number)).toEqual([7, 1462]);
+    expect(p.passport[0]!.art).toMatch(/\/7\.webp$/);
     expect(p.eligibility.find((e) => e.template === 'chog_holders')!.buckets).toContain('chogs');
-    expect((await withChog.chogHolders()).list.map((h) => h.wallet)).toContain(D);
+    const holder = (await withChog.chogHolders()).list.find((h) => h.wallet === D)!;
+    expect(holder.avatar).toMatch(/\/7\.webp$/);
 
     // A wallet with no Chog scores exactly as before, and Monad being down never breaks a page.
     const down = new ScoutService(db, { now: () => clock, cacheSec: 0, chogClient: { multicall: () => Promise.reject(new Error('rpc down')) } as never });

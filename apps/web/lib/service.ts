@@ -39,8 +39,10 @@ import {
   loadLaunchAftermath,
   loadLaunchContext,
   loadWalletFacts,
+  chogAvatars,
+  chogTokensOf,
 } from '@scout/db';
-import { CHOG_MONAD, SPARK_BASE, claimLiveSync, ingestVibeVibe, liveSyncState, monadClient, syncChog } from '@scout/sources';
+import { CHOG_MONAD, SPARK_BASE, chogArtUrl, claimLiveSync, ingestVibeVibe, liveSyncState, monadClient, syncChog, syncChogTokens } from '@scout/sources';
 import { type PublicClient, createPublicClient, http } from 'viem';
 
 /** Live indexing starts just before $SCOUT launched (vibe/vibe launch #8422). */
@@ -313,13 +315,41 @@ export class ScoutService {
    * wallet. Best effort: if Monad is slow or down, pages carry on with what is already stored.
    * Returns true when a reading changed.
    */
-  async refreshChog(wallets: Address[], timeoutMs = 5_000): Promise<boolean> {
+  private monad() {
     if (this.chogClient === undefined) {
       this.chogClient = process.env.SCOUT_CHOG === '0' ? null : monadClient(process.env.SCOUT_CHOG_RPC ?? CHOG_MONAD.rpc);
     }
-    if (!this.chogClient || !wallets.length) return false;
+    return this.chogClient;
+  }
+
+  /**
+   * Refreshes who owns each Chog Genesis, at most every 6 hours (about two seconds of Monad reads). Best effort:
+   * if Monad is slow or a read is partial, the last snapshot stays.
+   */
+  async refreshChogTokens(timeoutMs = 8_000): Promise<boolean> {
+    const client = this.monad();
+    if (!client) return false;
     try {
-      const sync = syncChog(this.db, { client: this.chogClient, wallets, now: this.now(), maxAgeSec: 600 });
+      const sync = syncChogTokens(this.db, { client, now: this.now(), maxAgeSec: 6 * 3600 });
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref?.());
+      const r = await Promise.race([sync, timeout]);
+      return !!r?.refreshed;
+    } catch {
+      return false;
+    }
+  }
+
+  /** A wallet's Chog Genesis tokens with their artwork: its Chog Passport. */
+  async chogPassport(wallet: Address) {
+    const tokens = await chogTokensOf(this.db, wallet);
+    return tokens.map((t) => ({ tokenId: t.tokenId, number: t.meta, art: chogArtUrl(t.meta) }));
+  }
+
+  async refreshChog(wallets: Address[], timeoutMs = 5_000): Promise<boolean> {
+    const client = this.monad();
+    if (!client || !wallets.length) return false;
+    try {
+      const sync = syncChog(this.db, { client, wallets, now: this.now(), maxAgeSec: 600 });
       const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref?.());
       const r = await Promise.race([sync, timeout]);
       if (!r) return false;
@@ -342,11 +372,13 @@ export class ScoutService {
       `SELECT (SELECT count(*)::int FROM profiles) AS profiles,
               (SELECT count(*)::int FROM chog_status c JOIN profiles p ON p.wallet = c.wallet WHERE c.tokens > 0) AS holders`,
     );
+    const avatars = await chogAvatars(this.db, rows.map((r) => r.wallet as Address));
     return {
       profiles: counts?.profiles ?? 0,
       holders: counts?.holders ?? 0,
       list: rows.map((r) => ({
         wallet: r.wallet as Address,
+        avatar: avatars.has(r.wallet as Address) ? chogArtUrl(avatars.get(r.wallet as Address)!) : null,
         tokens: Number(r.tokens),
         chogBalance: BigInt(r.chog_balance),
         heldSince: r.held_since == null ? null : Number(r.held_since),
@@ -438,7 +470,7 @@ export class ScoutService {
 
     // The profile row is read fresh: the cached population can be up to a minute old, and on a host with
     // several server instances an opt-in made through another instance would otherwise not show up yet.
-    await this.refreshChog([wallet]);
+    await Promise.all([this.refreshChog([wallet]), this.refreshChogTokens()]);
     const [profileRow] = await this.db.query<{ opted_in_at: string }>('SELECT opted_in_at FROM profiles WHERE wallet = $1', [wallet]);
     let pop = await this.population(asOf);
     if (profileRow && Number(profileRow.opted_in_at) <= asOf && !pop.facts.has(wallet)) {
@@ -496,6 +528,7 @@ export class ScoutService {
       drops: [...facts!.scoutDrops].sort((a, b) => b.receivedAt - a.receivedAt),
       createdLaunches: facts!.createdLaunches,
       chog: facts!.chog ?? null,
+      passport: await this.chogPassport(wallet),
       eligibility,
     };
   }

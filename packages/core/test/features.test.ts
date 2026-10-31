@@ -116,9 +116,17 @@ describe('alignment (A)', () => {
     expect(codes({ tokens: 2, heldSince: T0 - 30 * DAY })).toEqual(['CHOG_HOLDER', 'CHOG_LONG_HOLD']);
     expect(codes({ tokens: 1 })).toEqual(['CHOG_HOLDER']);
     expect(codes({ tokens: 1, heldSince: T0 + 1 })).toEqual([]);
-    expect(codes({ tokens: 0, chogBalance: 10n ** 24n })).toEqual([]);
+    expect(codes({ tokens: 0, chogBalance: 10n ** 24n })).toEqual(['CHOG_TOKEN_100K']);
     expect(codes(undefined)).toEqual([]);
     expect(alignment(wallet(1, { chog: { tokens: 1, heldSince: T0 - 60 * DAY } }), launch(), cfg).value).toBeCloseTo(0.1 + 0.05);
+  });
+
+  it('rewards $CHOG holders by tier, counting only the highest tier', () => {
+    const codes = (chog: WalletFacts['chog']) => alignment(wallet(1, { chog }), launch(), cfg).components.map((c) => c.code);
+    expect(codes({ tokens: 0, chogBalance: 999n * 10n ** 18n })).toEqual([]);
+    expect(codes({ tokens: 0, chogBalance: 1_000n * 10n ** 18n })).toEqual(['CHOG_TOKEN_1K']);
+    expect(codes({ tokens: 0, chogBalance: 250_000n * 10n ** 18n })).toEqual(['CHOG_TOKEN_100K']);
+    expect(codes({ tokens: 1, heldSince: T0 - DAY, chogBalance: 5_000n * 10n ** 18n })).toEqual(['CHOG_HOLDER', 'CHOG_TOKEN_1K']);
   });
 
   it('rewards charged Vibers, guilds and shipping; punishes rugs', () => {

@@ -12,6 +12,7 @@ const MONADSCAN = 'https://monadscan.com/address/';
 
 export default async function ChogPage() {
   const svc = await getService();
+  await svc.refreshChogTokens();
   const holders = await svc.chogHolders(100);
   const recipe = TEMPLATES.chog_holders;
 
@@ -57,8 +58,8 @@ export default async function ChogPage() {
             <div className="kicker">2 · Chogs score higher</div>
             <h3 style={{ margin: '12px 0 8px' }}>An alignment boost</h3>
             <p className="muted small">
-              Holding a Chog adds +0.10 to alignment. Holding one for 30 days or more adds another +0.05. Every boost shows on your profile as a
-              plain reason, like everything else Scout scores.
+              Holding a Chog adds +0.10 to alignment. Holding one for 30 days or more adds another +0.05. Holding 1,000 $CHOG adds +0.03, and
+              100,000 adds +0.06. Every boost shows on your profile as a plain reason, like everything else Scout scores.
             </p>
           </div>
         </Item>
@@ -110,7 +111,11 @@ export default async function ChogPage() {
                   {holders.list.map((h) => (
                     <tr key={h.wallet}>
                       <td>
-                        <Link href={`/profile/${h.wallet}`} className="mono link">
+                        <Link href={`/profile/${h.wallet}`} className="mono link holder-link">
+                          {h.avatar && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className="chog-avatar sm" src={h.avatar} alt="" width={36} height={36} loading="lazy" />
+                          )}
                           {short(h.wallet)}
                         </Link>
                       </td>

@@ -6,7 +6,14 @@ is signed on Monad.
 
 ## The passport
 
-On sign up and on profile views, at most once every 10 minutes per wallet, Scout reads `balanceOf` on Chog Genesis
+Every profile carries a Chog Passport: the wallet's own Chog Genesis NFTs, with their real art and numbers, read from
+Monad. The first Chog becomes the wallet's avatar on its profile and in the holder list on `/chog`.
+
+Chog Genesis is not enumerable, so Scout reads `ownerOf` and `tokenURI` for all 1,969 tokens through Multicall3 (250
+tokens per call, about two seconds) and stores the result in `chog_tokens`, at most once every six hours. A scan is
+saved only when every token was read. The art comes from the collection's own IPFS folder.
+
+The balances: on sign up and on profile views, at most once every 10 minutes per wallet, Scout reads `balanceOf` on Chog Genesis
 ([`0xc96d…3763`](https://monadscan.com/address/0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763)) and $CHOG
 ([`0x3500…7777`](https://monadscan.com/address/0x350035555e10d9afaf1566aaebfced5ba6c27777)) through Multicall3 and
 stores the reading in `chog_status`. If Monad is slow or down, pages carry on with the last reading.
@@ -20,6 +27,10 @@ blocks, so transfer history isn't replayed. A Chog first seen after a launch gra
 |---|---|---|
 | `CHOG_HOLDER` | +0.10 alignment | Holds at least one Chog Genesis |
 | `CHOG_LONG_HOLD` | +0.05 alignment | Has held a Chog for 30 days or more |
+| `CHOG_TOKEN_1K` | +0.03 alignment | Holds 1,000 $CHOG or more |
+| `CHOG_TOKEN_100K` | +0.06 alignment | Holds 100,000 $CHOG or more (replaces the 1K tier) |
+
+The $CHOG balance is the latest reading, so it counts as of now rather than as of the launch.
 
 ## Filters
 
@@ -29,8 +40,9 @@ blocks, so transfer history isn't replayed. A Chog first seen after a launch gra
 
 | Bucket | Share | Who |
 |---|---|---|
-| `chogs` | 60% | Chog holders who don't dump (`chog_holder AND dump_score < 0.5`) |
-| `long_chogs` | 25% | Chogs held for 30 days or more (`chog_held_days >= 30 AND dump_score < 0.5`) |
+| `chogs` | 50% | Chog holders who don't dump (`chog_holder AND dump_score < 0.5`) |
+| `long_chogs` | 20% | Chogs held for 30 days or more (`chog_held_days >= 30 AND dump_score < 0.5`) |
+| `chog_token` | 15% | $CHOG holders who don't dump (`chog_balance >= 1000 AND dump_score < 0.5`) |
 | `holders` | 15% | Proven holders of earlier Scout drops |
 
 Farms, rug creators and wallets that sold most of their last drop within an hour are excluded. Per wallet caps still
@@ -40,13 +52,14 @@ are enough holders. [EVALUATION.md](EVALUATION.md#chog-holders) has the numbers.
 ## Where to see it
 
 - **`/chog`** explains the integration, lists signed up holders and opens the recipe in the builder.
-- **Profiles** show a Chog chip, the Chog count, the date first seen and the $CHOG balance.
+- **Profiles** show the Chog Passport (every Chog the wallet holds, with its art), the Chog as avatar, a Chog chip,
+  the date first seen and the $CHOG balance.
 - **The builder** has the Chog Holders recipe.
 
 ## Running it
 
 ```bash
-pnpm scout sync-chog [wallet …]   # refresh the given wallets, or every signed-up wallet
+pnpm scout sync-chog [wallet …]   # refresh the given wallets, or every signed-up wallet, and the passport scan
 ```
 
 `SCOUT_CHOG=0` turns lookups off. `SCOUT_CHOG_RPC` points them at another Monad RPC.

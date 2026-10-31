@@ -185,14 +185,15 @@ describe('resolveAllocation', () => {
       wallet(2, { chog: { tokens: 1, heldSince: T0 - 3 * DAY } }), // new Chog
       wallet(3, { chog: { tokens: 1, heldSince: T0 - 90 * DAY }, scoutDrops: [drop(5, 1), drop(15, 1), drop(25, 0.9)] }), // Chog who dumps
       wallet(4, { chog: { tokens: 1, heldSince: T0 + DAY } }), // bought after the snapshot
-      wallet(5, { chog: { tokens: 0, chogBalance: 5_000n * SPARK } }), // $CHOG only, no NFT
+      wallet(5, { chog: { tokens: 0, chogBalance: 5_000n * SPARK } }), // $CHOG only, no NFT: the $CHOG share
       wallet(6), // nobody
     ];
     // Loose caps: with only two holders, the default 0.5% wallet cap would fill before the long-hold bucket.
     const policy = { ...TEMPLATES.chog_holders.policy, caps: { perWalletBps: 10_000, perClusterBps: 10_000 } };
     const set = resolveAllocation(input({ wallets, policy }));
     const paid = new Map(set.recipients.map((r) => [r.wallet, r]));
-    expect([...paid.keys()].sort()).toEqual([addr(1), addr(2)]);
+    expect([...paid.keys()].sort()).toEqual([addr(1), addr(2), addr(5)]);
+    expect(paid.get(addr(5))!.buckets.map((b) => b.id)).toEqual(['chog_token']);
     expect(paid.get(addr(1))!.buckets.map((b) => b.id).sort()).toEqual(['chogs', 'long_chogs']);
     expect(paid.get(addr(2))!.buckets.map((b) => b.id)).toEqual(['chogs']);
     expect(paid.get(addr(1))!.reasons.map((r) => r.code)).toEqual(expect.arrayContaining(['CHOG_HOLDER', 'CHOG_LONG_HOLD']));

@@ -35,6 +35,8 @@ export const REASON_LABELS: Record<string, string> = {
   SHIPPED_SUBSTANCE: 'Shipped a product that graduated',
   CHOG_HOLDER: 'Holds a Chog Genesis NFT',
   CHOG_LONG_HOLD: 'Long-time Chog holder',
+  CHOG_TOKEN_1K: 'Holds 1,000+ $CHOG',
+  CHOG_TOKEN_100K: 'Holds 100,000+ $CHOG',
   CREATOR_RUG: 'Created a flagged launch',
   ALIGNMENT_CAP: 'Alignment cap',
   DUMPED_1H_LAST_DROP: 'Dumped the last drop within 1h',

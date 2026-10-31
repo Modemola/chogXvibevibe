@@ -4,7 +4,11 @@ import {
   type Db,
   type RecordBatch,
   createPgliteDb,
+  chogAvatars,
+  chogTokensOf,
+  chogTokensUpdatedAt,
   getChogStatus,
+  saveChogTokens,
   listChogHolders,
   saveChogStatus,
   latestSnapshotId,
@@ -172,5 +176,20 @@ describe('db', () => {
     const back = await saveChogStatus(db, { wallet: ALICE, tokens: 1, chogBalance: 0n, checkedAt: T0 + DAY });
     expect(back.heldSince).toBe(T0 + DAY);
     expect((await getChogStatus(db, [ALICE])).get(ALICE)!.tokens).toBe(1);
+  });
+
+  it('stores who owns each Chog and answers per wallet', async () => {
+    expect(await chogTokensUpdatedAt(db)).toBeUndefined();
+    await saveChogTokens(db, [
+      { tokenId: 1, owner: ALICE, meta: 1462 },
+      { tokenId: 2, owner: BOB, meta: 1463 },
+      { tokenId: 7, owner: ALICE, meta: 1468 },
+    ], T0);
+    expect((await chogTokensOf(db, ALICE)).map((t) => t.meta)).toEqual([1462, 1468]);
+    expect(await chogTokensUpdatedAt(db)).toBe(T0);
+    // A transfer moves the token on the next snapshot.
+    await saveChogTokens(db, [{ tokenId: 7, owner: BOB, meta: 1468 }], T0 + DAY);
+    expect((await chogTokensOf(db, ALICE)).map((t) => t.meta)).toEqual([1462]);
+    expect(await chogAvatars(db, [ALICE, BOB, CREATOR])).toEqual(new Map([[ALICE, 1462], [BOB, 1463]]));
   });
 });

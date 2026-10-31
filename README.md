@@ -26,8 +26,9 @@ one person.
    on chain: whether it held past earlier airdrops, what it trades, whether it sells drops within the hour, and
    whether it moves in lockstep with other wallets. Every score lists its reasons.
 2. **A Chog passport.** Chog Genesis lives on Monad and vibe/vibe trading lives on Robinhood Chain, and a wallet has
-   the same address on both. Scout reads a member's Chogs straight from Monad. Holding a Chog raises the score, and
-   holding one for 30 days raises it again.
+   the same address on both. Scout reads a member's Chogs straight from Monad and shows them, art and numbers, on
+   their profile, with their Chog as the avatar. Holding a Chog raises the score, holding one for 30 days raises it
+   again, and holding $CHOG adds a tier of its own.
 3. **Recipes for creators.** A creator picks a recipe or writes one: who qualifies, how the slice is split, the caps
    per wallet and per cluster, who is excluded. The Chog Holders recipe pays Chogs first. The creator can lock the
    recipe to the launch before it graduates, so it can't be changed once the result is known.
@@ -152,8 +153,9 @@ farms are known:
 
 No honest wallet was penalised as a farm at any of the 43 graduations.
 
-**Holding a Chog pays.** With 248 simulated Chog holders under the Chog Holders recipe, Chogs held for 30 days or
-more averaged **5,000 tokens** and newer Chogs **3,772**. Dumpers, rug creators and farms received nothing.
+**Holding a Chog pays.** Under the Chog Holders recipe at the last simulated graduation, 44 Chog holders were paid
+the full **5,000 token** cap and 35 $CHOG only holders averaged **4,943**. Dumpers, rug creators and farms received
+nothing.
 
 Reproduce the first two with `pnpm scout evaluate --ignore-hubs 20` and the indexer test suite.
 
