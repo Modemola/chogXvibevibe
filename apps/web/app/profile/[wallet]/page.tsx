@@ -1,5 +1,6 @@
 import { LANES, PAIR_CLASSES, TEMPLATES, TEMPLATE_IDS } from '@scout/core';
 import Link from 'next/link';
+import { after } from 'next/server';
 import { ContribBar, Radar, ScoreRing, SoldSpark } from '@/components/charts';
 import { Item, Reveal, Stagger, Tilt } from '@/components/motion';
 import { PageHead } from '@/components/page-head';
@@ -8,6 +9,7 @@ import { getService } from '@/lib/server';
 import { isApiError } from '@/lib/service';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 type Search = { template?: string; lane?: string; pair?: string };
 
@@ -15,6 +17,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   const { wallet } = await params;
   const q = await searchParams;
   const svc = await getService();
+  after(() => svc.settleChogTokens());
   let p;
   try {
     p = await svc.profile(wallet, { template: q.template, lane: q.lane, pairClass: q.pair });

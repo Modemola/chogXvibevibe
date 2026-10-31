@@ -1,5 +1,5 @@
 import { type Address, normalizeAddress } from '@scout/core';
-import { type ChogToken, type Db, chogTokensUpdatedAt, getChogStatus, saveChogStatus, saveChogTokens, type ChogStatusRecord } from '@scout/db';
+import { type ChogToken, type Db, chogTokensCoverage, getChogStatus, saveChogStatus, saveChogTokens, type ChogStatusRecord } from '@scout/db';
 import { type PublicClient, createPublicClient, defineChain, erc20Abi, erc721Abi, http, parseAbi } from 'viem';
 
 /** Chog on Monad mainnet. Scout only reads it: the same address holds Chogs on Monad and trades on vibe/vibe. */
@@ -88,45 +88,59 @@ export async function syncChog(
 const OWNERSHIP_ABI = parseAbi(['function ownerOf(uint256) view returns (address)', 'function tokenURI(uint256) view returns (string)']);
 
 /**
- * Reads the owner and metadata number of every Chog Genesis token, 250 tokens per Multicall3 request (about two
- * seconds for all 1,969). Tokens whose calls fail are left out; callers decide whether a partial read is enough.
+ * Reads the owner and metadata number of Chog Genesis tokens, 250 per Multicall3 request, all requests at once, with
+ * up to two more rounds for tokens whose calls failed. Tokens still failing are left out.
  */
-export async function readChogTokens(client: Pick<PublicClient, 'multicall'>, supply: number = CHOG_MONAD.supply): Promise<ChogToken[]> {
-  const out: ChogToken[] = [];
-  for (let start = 1; start <= supply; start += 250) {
-    const ids = Array.from({ length: Math.min(250, supply + 1 - start) }, (_, i) => start + i);
-    const r = await client.multicall({
-      allowFailure: true,
-      contracts: ids.flatMap((id) => [
-        { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'ownerOf', args: [BigInt(id)] } as const,
-        { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'tokenURI', args: [BigInt(id)] } as const,
-      ]),
-    });
-    ids.forEach((tokenId, j) => {
-      const owner = r[2 * j];
-      const uri = r[2 * j + 1];
-      if (owner?.status !== 'success' || uri?.status !== 'success') return;
-      const meta = Number(/\/(\d+)\.json$/.exec(String(uri.result))?.[1]);
-      if (!Number.isFinite(meta)) return;
-      out.push({ tokenId, owner: normalizeAddress(String(owner.result)), meta });
-    });
+export async function readChogTokens(
+  client: Pick<PublicClient, 'multicall'>,
+  supply: number = CHOG_MONAD.supply,
+  ids: number[] = Array.from({ length: supply }, (_, i) => i + 1),
+): Promise<ChogToken[]> {
+  const got = new Map<number, ChogToken>();
+  let missing = ids;
+  for (let round = 0; round < 3 && missing.length; round++) {
+    const chunks: number[][] = [];
+    for (let k = 0; k < missing.length; k += 250) chunks.push(missing.slice(k, k + 250));
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const r = await client
+          .multicall({
+            allowFailure: true,
+            contracts: chunk.flatMap((id) => [
+              { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'ownerOf', args: [BigInt(id)] } as const,
+              { address: CHOG_MONAD.nft, abi: OWNERSHIP_ABI, functionName: 'tokenURI', args: [BigInt(id)] } as const,
+            ]),
+          })
+          .catch(() => [] as { status: string; result?: unknown }[]);
+        chunk.forEach((tokenId, j) => {
+          const owner = r[2 * j];
+          const uri = r[2 * j + 1];
+          if (owner?.status !== 'success' || uri?.status !== 'success') return;
+          const meta = Number(/\/(\d+)\.json$/.exec(String(uri.result))?.[1]);
+          if (!Number.isFinite(meta)) return;
+          got.set(tokenId, { tokenId, owner: normalizeAddress(String(owner.result)), meta });
+        });
+      }),
+    );
+    missing = missing.filter((id) => !got.has(id));
   }
-  return out;
+  return [...got.values()].sort((x, y) => x.tokenId - y.tokenId);
 }
 
 /**
- * Refreshes the ownership snapshot when it is older than `maxAgeSec`. Stores it only when every token was read, so a
- * partial read never makes a holder's Chogs disappear.
+ * Refreshes the ownership snapshot when it is incomplete or its stalest token is older than `maxAgeSec`. Every token
+ * read is saved, so a slow or partial read still makes progress; a token that could not be read keeps its last
+ * known owner, so a partial read never makes a holder's Chogs disappear.
  */
 export async function syncChogTokens(
   db: Db,
   opts: { client: Pick<PublicClient, 'multicall'>; now?: number; maxAgeSec?: number; supply?: number },
 ): Promise<{ refreshed: boolean; tokens: number }> {
   const now = opts.now ?? Math.floor(Date.now() / 1000);
-  const last = await chogTokensUpdatedAt(db);
-  if (last !== undefined && now - last < (opts.maxAgeSec ?? 0)) return { refreshed: false, tokens: 0 };
-  const tokens = await readChogTokens(opts.client, opts.supply);
-  if (tokens.length < (opts.supply ?? CHOG_MONAD.supply)) return { refreshed: false, tokens: tokens.length };
-  await saveChogTokens(db, tokens, now);
-  return { refreshed: true, tokens: tokens.length };
+  const supply = opts.supply ?? CHOG_MONAD.supply;
+  const cov = await chogTokensCoverage(db);
+  if (cov.count >= supply && cov.oldest !== undefined && now - cov.oldest < (opts.maxAgeSec ?? 0)) return { refreshed: false, tokens: 0 };
+  const tokens = await readChogTokens(opts.client, supply);
+  if (tokens.length) await saveChogTokens(db, tokens, now);
+  return { refreshed: tokens.length >= supply, tokens: tokens.length };
 }

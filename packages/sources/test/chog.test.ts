@@ -48,7 +48,7 @@ describe('Chog on Monad', () => {
     await db.close();
   });
 
-  it('snapshots who owns each Chog, and keeps the old snapshot when a read is partial', async () => {
+  it('snapshots who owns each Chog, and keeps what it can when a read is partial', async () => {
     const db = await createPgliteDb();
     await migrate(db);
     let fail = false;
@@ -69,6 +69,15 @@ describe('Chog on Monad', () => {
     fail = true;
     expect(await syncChogTokens(db, { client: monad as never, now: 9_000, maxAgeSec: 600, supply: 5 })).toEqual({ refreshed: false, tokens: 4 });
     expect((await chogTokensOf(db, a(1))).map((t) => t.meta)).toEqual([1461, 1463, 1465]);
+    // A partial first scan on an empty table is kept, and the next call fills in the rest even within maxAgeSec.
+    const fresh = await createPgliteDb();
+    await migrate(fresh);
+    expect(await syncChogTokens(fresh, { client: monad as never, now: 1_000, supply: 5 })).toEqual({ refreshed: false, tokens: 4 });
+    expect((await chogTokensOf(fresh, a(1))).map((t) => t.meta)).toEqual([1461, 1465]);
+    fail = false;
+    expect(await syncChogTokens(fresh, { client: monad as never, now: 1_010, maxAgeSec: 600, supply: 5 })).toEqual({ refreshed: true, tokens: 5 });
+    expect((await chogTokensOf(fresh, a(1))).map((t) => t.meta)).toEqual([1461, 1463, 1465]);
+    await fresh.close();
     expect(chogArtUrl(1462)).toBe(`https://gateway.pinata.cloud/ipfs/${CHOG_MONAD.artCid}/1462.webp`);
     await db.close();
   });

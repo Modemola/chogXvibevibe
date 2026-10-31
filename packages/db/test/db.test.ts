@@ -6,6 +6,7 @@ import {
   createPgliteDb,
   chogAvatars,
   chogTokensOf,
+  chogTokensCoverage,
   chogTokensUpdatedAt,
   getChogStatus,
   saveChogTokens,
@@ -190,6 +191,7 @@ describe('db', () => {
     // A transfer moves the token on the next snapshot.
     await saveChogTokens(db, [{ tokenId: 7, owner: BOB, meta: 1468 }], T0 + DAY);
     expect((await chogTokensOf(db, ALICE)).map((t) => t.meta)).toEqual([1462]);
+    expect(await chogTokensCoverage(db)).toEqual({ count: 3, oldest: T0 });
     expect(await chogAvatars(db, [ALICE, BOB, CREATOR])).toEqual(new Map([[ALICE, 1462], [BOB, 1463]]));
   });
 });

@@ -1,17 +1,20 @@
 import { TEMPLATES } from '@scout/core';
 import { CHOG_MONAD } from '@scout/sources';
 import Link from 'next/link';
+import { after } from 'next/server';
 import { CountUp, Item, Reveal, Stagger } from '@/components/motion';
 import { PageHead } from '@/components/page-head';
 import { date, short, tokens } from '@/lib/format';
 import { getService } from '@/lib/server';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 const MONADSCAN = 'https://monadscan.com/address/';
 
 export default async function ChogPage() {
   const svc = await getService();
+  after(() => svc.settleChogTokens());
   await svc.refreshChogTokens();
   const holders = await svc.chogHolders(100);
   const recipe = TEMPLATES.chog_holders;

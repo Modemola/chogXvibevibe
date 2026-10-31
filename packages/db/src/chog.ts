@@ -86,6 +86,12 @@ export async function chogTokensUpdatedAt(db: Db): Promise<number | undefined> {
   return row?.at == null ? undefined : Number(row.at);
 }
 
+/** How many tokens the ownership snapshot holds, and when its stalest token was read. */
+export async function chogTokensCoverage(db: Db): Promise<{ count: number; oldest?: number }> {
+  const [row] = await db.query<{ n: number; at: string | null }>('SELECT count(*)::int AS n, min(updated_at) AS at FROM chog_tokens');
+  return { count: Number(row?.n ?? 0), oldest: row?.at == null ? undefined : Number(row.at) };
+}
+
 /** The Chog Genesis tokens a wallet owns, lowest number first. */
 export async function chogTokensOf(db: Db, wallet: Address): Promise<ChogToken[]> {
   const rows = await db.query<{ token_id: number; owner: string; meta: number }>(

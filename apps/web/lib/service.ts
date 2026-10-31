@@ -105,6 +105,7 @@ export class ScoutService {
   private readonly cacheSec: number;
   private cache?: { key: number; at: number; pop: Promise<Population> };
   private chogClient?: Pick<PublicClient, 'multicall'> | null;
+  private chogTokenSync?: Promise<unknown>;
 
   constructor(
     private readonly db: Db,
@@ -330,13 +331,24 @@ export class ScoutService {
     const client = this.monad();
     if (!client) return false;
     try {
-      const sync = syncChogTokens(this.db, { client, now: this.now(), maxAgeSec: 6 * 3600 });
+      // One scan at a time per instance; a page can wait for the rest of it after responding (settleChogTokens).
+      this.chogTokenSync ??= syncChogTokens(this.db, { client, now: this.now(), maxAgeSec: 6 * 3600 })
+        .catch(() => null)
+        .finally(() => {
+          this.chogTokenSync = undefined;
+        });
+      const sync = this.chogTokenSync as Promise<{ refreshed: boolean } | null>;
       const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs).unref?.());
       const r = await Promise.race([sync, timeout]);
       return !!r?.refreshed;
     } catch {
       return false;
     }
+  }
+
+  /** Waits for a passport scan still running after its page timed out, so it can finish and save. */
+  async settleChogTokens(): Promise<void> {
+    await this.chogTokenSync;
   }
 
   /** A wallet's Chog Genesis tokens with their artwork: its Chog Passport. */
