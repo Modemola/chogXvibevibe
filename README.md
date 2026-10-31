@@ -54,6 +54,10 @@ and the recipes the wallet qualifies for.
 
 ![A profile scored with the Chog Holders recipe, showing the Chog holder chip and the score breakdown](docs/screens/profile.jpg)
 
+**The Chog Passport.** Every Chog the wallet holds, with its real art read from Monad, and the first one as the avatar.
+
+![The Chog Passport: a holder's 44 Chog Genesis NFTs with their art and numbers](docs/screens/passport.jpg)
+
 **The builder.** Pick a recipe and a launch, edit the rules, and watch the list of recipients resolve live. Export
 the CSV, the claims with proofs, or the policy, or lock it to the launch.
 
