@@ -98,7 +98,10 @@ export async function handle(fn: (svc: ScoutService) => Promise<unknown>): Promi
   } catch (e) {
     if (isApiError(e)) return json({ error: e.message, issues: e.issues }, e.status);
     console.error(e);
-    return json({ error: 'Internal error' }, 500);
+    // The error's class and code (a Postgres SQLSTATE, a Node errno) help diagnose a deploy and reveal no internals.
+    const err = e as { name?: unknown; code?: unknown };
+    const kind = [typeof err?.name === 'string' ? err.name : 'Error', typeof err?.code === 'string' ? err.code : null].filter(Boolean).join(' ');
+    return json({ error: 'Internal error', kind }, 500);
   }
 }
 
